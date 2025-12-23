@@ -54,7 +54,11 @@ esp_err_t ble_wifi_provisioning_start(void)
     // ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_start());
+    // 尝试启动WiFi，如果已经启动则忽略错误
+    esp_err_t err = esp_wifi_start();
+    if (err != ESP_OK && err != ESP_ERR_WIFI_STATE) {
+        ESP_ERROR_CHECK(err);
+    }
 
     // 注册配网事件
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_PROV_EVENT, ESP_EVENT_ANY_ID, &wifi_prov_event_handler, NULL));
@@ -67,7 +71,11 @@ esp_err_t ble_wifi_provisioning_start(void)
 
     // 初始化配网管理器
     ESP_ERROR_CHECK(wifi_prov_mgr_init(config));
-
+    // --- 强制重置 (添加这行代码) ---
+    // 这会清除配网信息，确保每次启动都进入配网模式
+    // 调试完成后记得注释掉！
+    wifi_prov_mgr_reset_provisioning(); 
+    // -----------------------------
     // 检查是否已配网
     bool provisioned = false;
     ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));

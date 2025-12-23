@@ -286,6 +286,7 @@ void app_main(void)
     printf("Display initialized\n");
     
     printf("BLE provisioning started\n");
+    ble_wifi_provisioning_start(); // 启动蓝牙配网
     // 初始化触摸屏
     err = init_touch();
     if (err != ESP_OK) {
