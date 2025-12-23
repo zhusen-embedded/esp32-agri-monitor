@@ -73,9 +73,14 @@ esp_err_t ble_wifi_provisioning_start(void)
     ESP_ERROR_CHECK(wifi_prov_mgr_is_provisioned(&provisioned));
     if (!provisioned) {
         // 启动 BLE 配网
-        const char *service_name = "PROV_bda5bfd0-4537-493f-87de-fec58b2f3f8a"; // 可自定义
+        uint8_t eth_mac[6];
+        esp_wifi_get_mac(WIFI_IF_STA, eth_mac);
+        char service_name[32];
+        snprintf(service_name, sizeof(service_name), "BLE_PROV_%02X%02X%02X%02X%02X%02X",
+                 eth_mac[0], eth_mac[1], eth_mac[2], eth_mac[3], eth_mac[4], eth_mac[5]);
+
         const char *service_key = NULL;
-        ESP_LOGI(TAG, "Starting BLE provisioning");
+        ESP_LOGI(TAG, "Starting BLE provisioning with name: %s", service_name);
         ESP_ERROR_CHECK(wifi_prov_mgr_start_provisioning(
             WIFI_PROV_SECURITY_1, NULL, service_name, service_key));
     } else {
