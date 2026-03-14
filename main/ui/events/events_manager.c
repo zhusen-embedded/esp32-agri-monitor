@@ -9,10 +9,27 @@
 #include "esp_netif.h"
 #include "esp_wifi.h"
 #include "lvgl.h"
+#include <stdint.h>
 
 static lv_ui *s_ui_ctx = NULL;
 static lv_timer_t *s_wifi_timer = NULL;
 static bool s_wifi_evt_registered = false;
+static lv_obj_t *s_bound_wifi_menu_cont = NULL;
+static lv_obj_t *s_bound_cb_1 = NULL;
+static lv_obj_t *s_bound_cb_2 = NULL;
+static lv_obj_t *s_bound_cb_3 = NULL;
+static lv_obj_t *s_bound_cb_4 = NULL;
+static lv_obj_t *s_bound_cb_5 = NULL;
+
+static void wifi_menu_event_handler(lv_event_t *e);
+
+typedef enum {
+    HOME_ITEM_TEMPERATURE = 0,
+    HOME_ITEM_HUMIDITY,
+    HOME_ITEM_PH,
+    HOME_ITEM_NPK,
+    HOME_ITEM_LIGHT,
+} home_item_t;
 
 typedef enum {
     WIFI_UI_IDLE = 0,
@@ -49,9 +66,197 @@ static void update_wifi_icon(void)
     }
 }
 
+static void set_obj_visible(lv_obj_t *obj, bool visible)
+{
+    if (!obj) {
+        return;
+    }
+
+    if (visible) {
+        lv_obj_clear_flag(obj, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(obj, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
+static bool is_obj_visible(lv_obj_t *obj)
+{
+    return obj != NULL && !lv_obj_has_flag(obj, LV_OBJ_FLAG_HIDDEN);
+}
+
+static void set_home_item_visible(home_item_t item, bool visible)
+{
+    if (!s_ui_ctx) {
+        return;
+    }
+
+    switch (item) {
+        case HOME_ITEM_TEMPERATURE:
+            set_obj_visible(s_ui_ctx->screen_label_2, visible);
+            break;
+        case HOME_ITEM_HUMIDITY:
+            set_obj_visible(s_ui_ctx->screen_water_temp, visible);
+            set_obj_visible(s_ui_ctx->screen_waring_4, visible);
+            set_obj_visible(s_ui_ctx->screen_danger_4, visible);
+            break;
+        case HOME_ITEM_PH:
+            set_obj_visible(s_ui_ctx->screen_ph_temp, visible);
+            break;
+        case HOME_ITEM_NPK:
+            set_obj_visible(s_ui_ctx->screen_jia_bar, visible);
+            set_obj_visible(s_ui_ctx->screen_ling_bar, visible);
+            set_obj_visible(s_ui_ctx->screen_bar_1, visible);
+            set_obj_visible(s_ui_ctx->screen_jia, visible);
+            set_obj_visible(s_ui_ctx->screen_ling, visible);
+            set_obj_visible(s_ui_ctx->screen_dan, visible);
+            set_obj_visible(s_ui_ctx->screen_warring, visible);
+            set_obj_visible(s_ui_ctx->screen_waring_2, visible);
+            set_obj_visible(s_ui_ctx->screen_waring_3, visible);
+            set_obj_visible(s_ui_ctx->screen_danger, visible);
+            set_obj_visible(s_ui_ctx->screen_danger_2, visible);
+            set_obj_visible(s_ui_ctx->screen_danger_3, visible);
+            break;
+        case HOME_ITEM_LIGHT:
+            set_obj_visible(s_ui_ctx->screen_label_1, visible);
+            break;
+        default:
+            break;
+    }
+}
+
+static bool get_home_item_visible(home_item_t item)
+{
+    if (!s_ui_ctx) {
+        return true;
+    }
+
+    switch (item) {
+        case HOME_ITEM_TEMPERATURE:
+            return is_obj_visible(s_ui_ctx->screen_label_2);
+        case HOME_ITEM_HUMIDITY:
+            return is_obj_visible(s_ui_ctx->screen_water_temp);
+        case HOME_ITEM_PH:
+            return is_obj_visible(s_ui_ctx->screen_ph_temp);
+        case HOME_ITEM_NPK:
+            return is_obj_visible(s_ui_ctx->screen_jia_bar) ||
+                   is_obj_visible(s_ui_ctx->screen_ling_bar) ||
+                   is_obj_visible(s_ui_ctx->screen_bar_1);
+        case HOME_ITEM_LIGHT:
+            return is_obj_visible(s_ui_ctx->screen_label_1);
+        default:
+            return true;
+    }
+}
+
+static void sync_checkbox_with_home_item(lv_obj_t *checkbox, home_item_t item)
+{
+    if (!checkbox) {
+        return;
+    }
+
+    if (get_home_item_visible(item)) {
+        lv_obj_add_state(checkbox, LV_STATE_CHECKED);
+    } else {
+        lv_obj_clear_state(checkbox, LV_STATE_CHECKED);
+    }
+}
+
+static void home_item_checkbox_event_handler(lv_event_t *e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_VALUE_CHANGED) {
+        return;
+    }
+
+    lv_obj_t *target = lv_event_get_target(e);
+    home_item_t item = (home_item_t)(uintptr_t)lv_event_get_user_data(e);
+    bool visible = lv_obj_has_state(target, LV_STATE_CHECKED);
+    set_home_item_visible(item, visible);
+}
+
+static void init_home_item_settings(lv_ui *ui)
+{
+    if (!ui) {
+        return;
+    }
+
+    set_home_item_visible(HOME_ITEM_TEMPERATURE, true);
+    set_home_item_visible(HOME_ITEM_HUMIDITY, true);
+    set_home_item_visible(HOME_ITEM_PH, true);
+    set_home_item_visible(HOME_ITEM_NPK, true);
+    set_home_item_visible(HOME_ITEM_LIGHT, true);
+
+    if (ui->sitting_scr_cb_1) {
+        lv_obj_add_state(ui->sitting_scr_cb_1, LV_STATE_CHECKED);
+    }
+    if (ui->sitting_scr_cb_2) {
+        lv_obj_add_state(ui->sitting_scr_cb_2, LV_STATE_CHECKED);
+    }
+    if (ui->sitting_scr_cb_3) {
+        lv_obj_add_state(ui->sitting_scr_cb_3, LV_STATE_CHECKED);
+    }
+    if (ui->sitting_scr_cb_4) {
+        lv_obj_add_state(ui->sitting_scr_cb_4, LV_STATE_CHECKED);
+    }
+    if (ui->sitting_scr_cb_5) {
+        lv_obj_add_state(ui->sitting_scr_cb_5, LV_STATE_CHECKED);
+    }
+}
+
+static void bind_sitting_screen_events_if_needed(void)
+{
+    if (!s_ui_ctx) {
+        return;
+    }
+
+    bool recreated = false;
+
+    if (s_ui_ctx->sitting_scr_menu_1_cont_1 && s_bound_wifi_menu_cont != s_ui_ctx->sitting_scr_menu_1_cont_1) {
+        lv_obj_add_event_cb(s_ui_ctx->sitting_scr_menu_1_cont_1, wifi_menu_event_handler, LV_EVENT_CLICKED, NULL);
+        s_bound_wifi_menu_cont = s_ui_ctx->sitting_scr_menu_1_cont_1;
+        recreated = true;
+    }
+
+    if (s_ui_ctx->sitting_scr_cb_1 && s_bound_cb_1 != s_ui_ctx->sitting_scr_cb_1) {
+        lv_obj_add_event_cb(s_ui_ctx->sitting_scr_cb_1, home_item_checkbox_event_handler, LV_EVENT_VALUE_CHANGED, (void *)(uintptr_t)HOME_ITEM_TEMPERATURE);
+        s_bound_cb_1 = s_ui_ctx->sitting_scr_cb_1;
+        recreated = true;
+    }
+    if (s_ui_ctx->sitting_scr_cb_2 && s_bound_cb_2 != s_ui_ctx->sitting_scr_cb_2) {
+        lv_obj_add_event_cb(s_ui_ctx->sitting_scr_cb_2, home_item_checkbox_event_handler, LV_EVENT_VALUE_CHANGED, (void *)(uintptr_t)HOME_ITEM_HUMIDITY);
+        s_bound_cb_2 = s_ui_ctx->sitting_scr_cb_2;
+        recreated = true;
+    }
+    if (s_ui_ctx->sitting_scr_cb_3 && s_bound_cb_3 != s_ui_ctx->sitting_scr_cb_3) {
+        lv_obj_add_event_cb(s_ui_ctx->sitting_scr_cb_3, home_item_checkbox_event_handler, LV_EVENT_VALUE_CHANGED, (void *)(uintptr_t)HOME_ITEM_PH);
+        s_bound_cb_3 = s_ui_ctx->sitting_scr_cb_3;
+        recreated = true;
+    }
+    if (s_ui_ctx->sitting_scr_cb_4 && s_bound_cb_4 != s_ui_ctx->sitting_scr_cb_4) {
+        lv_obj_add_event_cb(s_ui_ctx->sitting_scr_cb_4, home_item_checkbox_event_handler, LV_EVENT_VALUE_CHANGED, (void *)(uintptr_t)HOME_ITEM_NPK);
+        s_bound_cb_4 = s_ui_ctx->sitting_scr_cb_4;
+        recreated = true;
+    }
+    if (s_ui_ctx->sitting_scr_cb_5 && s_bound_cb_5 != s_ui_ctx->sitting_scr_cb_5) {
+        lv_obj_add_event_cb(s_ui_ctx->sitting_scr_cb_5, home_item_checkbox_event_handler, LV_EVENT_VALUE_CHANGED, (void *)(uintptr_t)HOME_ITEM_LIGHT);
+        s_bound_cb_5 = s_ui_ctx->sitting_scr_cb_5;
+        recreated = true;
+    }
+
+    if (recreated) {
+        init_home_item_settings(s_ui_ctx);
+        sync_checkbox_with_home_item(s_ui_ctx->sitting_scr_cb_1, HOME_ITEM_TEMPERATURE);
+        sync_checkbox_with_home_item(s_ui_ctx->sitting_scr_cb_2, HOME_ITEM_HUMIDITY);
+        sync_checkbox_with_home_item(s_ui_ctx->sitting_scr_cb_3, HOME_ITEM_PH);
+        sync_checkbox_with_home_item(s_ui_ctx->sitting_scr_cb_4, HOME_ITEM_NPK);
+        sync_checkbox_with_home_item(s_ui_ctx->sitting_scr_cb_5, HOME_ITEM_LIGHT);
+        printf("Sitting screen events rebound\n");
+    }
+}
+
 static void wifi_status_timer_cb(lv_timer_t *timer)
 {
     (void)timer;
+    bind_sitting_screen_events_if_needed();
     update_wifi_icon();
 }
 
@@ -139,13 +344,8 @@ void init_custom_events(lv_ui *ui)
 {
     printf("Initializing custom events...\n");
     s_ui_ctx = ui;
-    if (ui->sitting_scr_menu_1_cont_1) {
-        printf("==> ble_wifi_provisioning_start_first\n");
-        lv_obj_add_event_cb(ui->sitting_scr_menu_1_cont_1, wifi_menu_event_handler, LV_EVENT_CLICKED, NULL);
-    } else {
-        printf("Error: ui->sitting_scr_menu_1_cont_1 is NULL!\n");
-    }
     start_sensor_data_updates(ui);
+    bind_sitting_screen_events_if_needed();
 
     update_wifi_icon();
     if (s_wifi_timer == NULL) {
