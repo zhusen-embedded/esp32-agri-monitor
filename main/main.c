@@ -18,10 +18,11 @@
 #include "events_temp_get.h"
 #include "events_manager.h"
 #include "ble_sitting_wifi/ble_sitting_wifi.h"
+#include "esp_psram.h" // 或者 esp_heap_caps.h
 // 显示屏引脚定义
 #define LCD_HOST SPI2_HOST
-#define LCD_PIN_SCLK     12
-#define LCD_PIN_MOSI     11
+#define LCD_PIN_SCLK     11
+#define LCD_PIN_MOSI     12
 #define LCD_PIN_CS       10
 #define LCD_PIN_DC       13
 #define LCD_PIN_RST      9
@@ -52,7 +53,7 @@ static SemaphoreHandle_t xGuiSemaphore = NULL;
 static esp_lcd_panel_io_handle_t tp_io_handle = NULL;
 
 // LVGL任务函数
-static void lvgl_task(void *pvParameter)
+static void __attribute__((unused)) lvgl_task(void *pvParameter)
 {
     while (1) {
         // 获取互斥锁
@@ -81,7 +82,7 @@ static esp_err_t init_touch(void)
         .scl_pullup_en = GPIO_PULLUP_ENABLE,
         .master.clk_speed = I2C_FREQ_HZ,
     };
-    i2c_set_timeout(I2C_NUM, 0xFFFFF);
+    // i2c_set_timeout(I2C_NUM, 0xFFFFF); // 移除可能导致错误的超时设置
     printf("Configuring I2C bus on SDA=%d, SCL=%d\n", I2C_SDA_PIN, I2C_SCL_PIN);
     ESP_ERROR_CHECK(i2c_param_config(I2C_NUM, &i2c_conf));
     
@@ -257,16 +258,18 @@ static esp_err_t system_init(void)
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
-    
-    // 初始化WiFi
-    wifi_init_sta();
-    
+
     return ESP_OK;
 }
 
 void app_main(void)
 {
     printf("Hello world! Initializing system...\n");
+    
+    // 打印内存信息
+    printf("Total free heap: %lu bytes\n", (unsigned long)esp_get_free_heap_size());
+    printf("Total free PSRAM: %lu bytes\n", (unsigned long)heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+    
     xGuiSemaphore = xSemaphoreCreateMutex();
     // 系统初始化
     esp_err_t err = system_init();
@@ -286,7 +289,8 @@ void app_main(void)
     printf("Display initialized\n");
     
     printf("BLE provisioning started\n");
-    ble_wifi_provisioning_start(); // 启动蓝牙配网
+    ble_wifi_provisioning_start(); // 启动蓝牙自定义配网
+    ble_wifi_force_reprovision(); // 强制重新配网
     // 初始化触摸屏
     err = init_touch();
     if (err != ESP_OK) {
@@ -351,7 +355,7 @@ void app_main(void)
     if (lvgl_task_result != pdPASS) {
         printf("Failed to create LVGL task\n");
     }
-    
+    printf("aippd_v6.8.1\n");
     printf("All tasks created successfully\n");
     
     // 主任务可以做其他事情

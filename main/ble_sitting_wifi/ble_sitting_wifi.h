@@ -21,6 +21,13 @@ esp_err_t ble_wifi_provisioning_start(void);
  */
 esp_err_t ble_wifi_provisioning_stop(void);
 
+/**
+ * @brief Force re-provisioning of BLE WiFi
+ * 
+ * @return esp_err_t ESP_OK on success
+ */
+esp_err_t ble_wifi_force_reprovision(void);
+
 #ifdef __cplusplus
 }
 #endif

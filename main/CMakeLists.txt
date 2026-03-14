@@ -34,9 +34,11 @@ idf_component_register(
         esp_driver_gpio 
         esp_http_client 
         esp_wifi 
+        mqtt
         nvs_flash
         json
         wifi_provisioning
         bt
         protocomm
+        esp_psram
 )

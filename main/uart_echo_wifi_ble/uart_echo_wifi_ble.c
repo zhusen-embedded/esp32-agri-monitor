@@ -1,5 +1,8 @@
 #include "uart_echo_wifi_ble/uart_echo_wifi_ble.h"
 #include "events_temp_get.h"
+#include "esp_log.h"
+#include "mqtt_client.h"
+#include "esp_crt_bundle.h"
 
 char esp32_id[13]; // 定义全局变量
 const char *model = "ESP32_S3_H_V1"; // 定义全局变量
@@ -19,6 +22,16 @@ const char *model = "ESP32_S3_H_V1"; // 定义全局变量
 
 // 日志标签定义
 static const char *TAG = "UART TEST";
+
+// 将 UART1 收发的数据镜像到 UART0 控制台
+static void log_uart1_bytes(const char *prefix, const uint8_t *data, int len)
+{
+    if (data == NULL || len <= 0) {
+        return;
+    }
+    ESP_LOGI(TAG, "%s (len=%d)", prefix, len);
+    ESP_LOG_BUFFER_HEXDUMP(TAG, data, len, ESP_LOG_INFO);
+}
 
 /*滑动窗口滤波*/
 // 滑动窗口大小定义
@@ -74,8 +87,9 @@ static void add_to_sliding_window(sensor_data_t *new_data) {
     // 如果是极端值，则不添加到窗口中
     if (is_extreme_value(new_data)) {
         ESP_LOGW(TAG, "Extreme value detected, skipping filter update");
-        ESP_LOGW(TAG, "N: %.1f, P: %.1f, K: %.1f, Salinity: %.1f", 
-                 new_data->nitrogen, new_data->phosphorus, new_data->potassium, new_data->salinity);
+        ESP_LOGW(TAG, "N: %.1f, P: %.1f, K: %.1f, Moisture: %.1f, pH: %.1f, Temp: %.1f, Salinity: %.1f",
+                 new_data->nitrogen, new_data->phosphorus, new_data->potassium, 
+                 new_data->moisture, new_data->ph, new_data->temperature, new_data->salinity);
         return;
     }
 
@@ -163,7 +177,11 @@ static sensor_data_t apply_median_filter(sensor_data_t *new_data) {
 //wifi_int**********************************
 #define WIFI_SSID "Redmi K60 Ultra"
 #define WIFI_PASSWORD "88888888"
-#define WEB_SERVER_URL "http://192.168.30.94:8080/user/soilMeasurement"
+
+#define MQTT_BROKER_URI "mqtts://e31aa9b0.ala.cn-hangzhou.emqxsl.cn:8883"
+#define MQTT_USERNAME "admin"
+#define MQTT_PASSWORD "123456"
+#define MQTT_TOPIC_BASE "soil"
 //***************************************
 float convert_moisture(uint16_t raw_value) { return (float)raw_value / 10.0; }
 float convert_conductivity(uint16_t raw_value) { return (float)raw_value; }
@@ -220,7 +238,7 @@ void wifi_init_sta(void)
     };
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+    // ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
 
     ESP_LOGI(TAG, "wifi初始化结束.");
@@ -240,23 +258,6 @@ static bool is_network_ready(void)
     return false;
 }
 //wifi事件创建
-static esp_err_t http_event_handler(esp_http_client_event_t *evt)
-{
-    switch(evt->event_id) {
-        case HTTP_EVENT_ON_DATA:
-            ESP_LOGI(TAG, "HTTP Data received: len=%d", evt->data_len);
-            break;
-        case HTTP_EVENT_ON_FINISH:
-            ESP_LOGI(TAG, "HTTP request finished");
-            break;
-        case HTTP_EVENT_ERROR:
-            ESP_LOGE(TAG, "HTTP request error");
-            break;
-        default:
-            break;
-    }
-    return ESP_OK;
-}
 //http-json格式-----------------------------------------
 static char* sensor_data_to_json(sensor_data_t *sensor_data)
 {
@@ -265,99 +266,95 @@ static char* sensor_data_to_json(sensor_data_t *sensor_data)
         ESP_LOGE(TAG, "Failed to create JSON object");
         return NULL;
     }
-    // 按照要求的格式创建JSON字段（字符串格式）
-    char nitrogen_str[16], phosphorus_str[16], potassium_str[16];
-    char ph_str[16], humidity_str[16], temperature_str[16], salinity_str[16];  // 添加盐分字符串
-    
-    sprintf(nitrogen_str, "%.1f", sensor_data->nitrogen);
-    sprintf(phosphorus_str, "%.1f", sensor_data->phosphorus);
-    sprintf(potassium_str, "%.1f", sensor_data->potassium);
-    sprintf(ph_str, "%.1f", sensor_data->ph);
-    sprintf(humidity_str, "%.0f", sensor_data->moisture);
-    sprintf(temperature_str, "%.0f", sensor_data->temperature);
-    sprintf(salinity_str, "%.1f", sensor_data->salinity);  // 添加盐分字符串格式化
-    // sprintf(moisture_str, "%.1f", sensor_data->moisture);
     cJSON_AddStringToObject(root, "model", model);
     cJSON_AddStringToObject(root, "esp32_id", esp32_id);
-    cJSON_AddStringToObject(root, "nitrogen", nitrogen_str);
-    cJSON_AddStringToObject(root, "phosphorus", phosphorus_str);
-    cJSON_AddStringToObject(root, "potassium", potassium_str);
-    cJSON_AddStringToObject(root, "ph", ph_str);
-    cJSON_AddStringToObject(root, "humidity", humidity_str);
-    cJSON_AddStringToObject(root, "temperature", temperature_str);
-    cJSON_AddStringToObject(root, "salinity", salinity_str);  // 添加盐分到JSON
+    cJSON_AddNumberToObject(root, "moisture", sensor_data->moisture);
+    cJSON_AddNumberToObject(root, "temperature", sensor_data->temperature);
+    cJSON_AddNumberToObject(root, "conductivity", sensor_data->conductivity);
+    cJSON_AddNumberToObject(root, "ph", sensor_data->ph);
+    cJSON_AddNumberToObject(root, "nitrogen", sensor_data->nitrogen);
+    cJSON_AddNumberToObject(root, "phosphorus", sensor_data->phosphorus);
+    cJSON_AddNumberToObject(root, "potassium", sensor_data->potassium);
+    cJSON_AddNumberToObject(root, "salinity", sensor_data->salinity);
 
-    char *json_string = cJSON_Print(root);
+    char *json_string = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
     
     return json_string;
 }
-/**
- * 发送传感器数据到Web服务器
- * @param sensor_data 指向传感器数据结构的指针
- * @return esp_err_t ESP_OK表示成功，其他值表示失败
- */
-// extern const char server_cert_pem_start[] asm("_binary_server_cert_pem_start");
-// extern const char server_cert_pem_end[]   asm("_binary_server_cert_pem_end");
-static esp_err_t send_sensor_data_to_server(sensor_data_t *sensor_data)
+static esp_mqtt_client_handle_t mqtt_client = NULL;
+static bool mqtt_connected = false;
+
+static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
-    // 检查URL是否设置
-    if (strlen(WEB_SERVER_URL) <= 10) {
-        ESP_LOGE(TAG, "Server URL not properly configured");
-        return ESP_ERR_INVALID_ARG;
+    esp_mqtt_event_handle_t event = event_data;
+
+    switch (event->event_id) {
+        case MQTT_EVENT_CONNECTED:
+            mqtt_connected = true;
+            ESP_LOGI(TAG, "MQTT connected");
+            break;
+        case MQTT_EVENT_DISCONNECTED:
+            mqtt_connected = false;
+            ESP_LOGW(TAG, "MQTT disconnected");
+            break;
+        case MQTT_EVENT_ERROR:
+            ESP_LOGE(TAG, "MQTT error");
+            break;
+        default:
+            break;
+    }
+}
+
+static void mqtt_start(void)
+{
+    if (mqtt_client != NULL) {
+        return;
     }
 
-    // 将传感器数据转换为JSON格式字符串
+    esp_mqtt_client_config_t mqtt_cfg = {
+        .broker.address.uri = MQTT_BROKER_URI,
+        .broker.verification.crt_bundle_attach = esp_crt_bundle_attach,
+        .credentials.username = MQTT_USERNAME,
+        .credentials.authentication.password = MQTT_PASSWORD,
+        .session.keepalive = 60,
+    };
+
+    mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
+    if (mqtt_client == NULL) {
+        ESP_LOGE(TAG, "Failed to init MQTT client");
+        return;
+    }
+
+    esp_mqtt_client_register_event(mqtt_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
+    esp_mqtt_client_start(mqtt_client);
+}
+
+static esp_err_t mqtt_publish_sensor_data(sensor_data_t *sensor_data)
+{
+    if (mqtt_client == NULL || !mqtt_connected) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
     char *json_data = sensor_data_to_json(sensor_data);
     if (json_data == NULL) {
         ESP_LOGE(TAG, "Failed to create JSON data");
         return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG, "Sending JSON data: %s", json_data);
+    char topic[96];
+    snprintf(topic, sizeof(topic), "%s/%s/data", MQTT_TOPIC_BASE, esp32_id);
 
-    // 配置HTTP客户端参数 - 添加超时设置
-    esp_http_client_config_t config = {
-        .url = WEB_SERVER_URL,
-        .event_handler = http_event_handler,
-        .method = HTTP_METHOD_POST,
-        .timeout_ms = 10000,  // 10秒超时
-        // .cert_pem = server_cert_pem_start,  // 删除或注释这一行
-    };
-    
-    // 初始化HTTP客户端
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-    if (client == NULL) {
-        ESP_LOGE(TAG, "Failed to initialize HTTP client");
-        free(json_data);
+    int msg_id = esp_mqtt_client_publish(mqtt_client, topic, json_data, 0, 1, 0);
+    free(json_data);
+
+    if (msg_id < 0) {
+        ESP_LOGE(TAG, "MQTT publish failed");
         return ESP_FAIL;
     }
-    
-    // 设置HTTP请求头，指定内容类型为JSON
-    esp_http_client_set_header(client, "Content-Type", "application/json");
-    // 设置POST数据内容和长度
-    esp_http_client_set_post_field(client, json_data, strlen(json_data));
-    
-    // 执行HTTP请求并获取结果
-    esp_err_t err = esp_http_client_perform(client);
-    if (err == ESP_OK) {
-        int status_code = esp_http_client_get_status_code(client);
-        ESP_LOGI(TAG, "HTTP POST Status = %d, content_length = %d",
-                 status_code,
-                 esp_http_client_get_content_length(client));
-                 
-        // 如果需要查看服务器返回的具体内容，可以读取响应
-        if (status_code == 200) {
-            ESP_LOGI(TAG, "Data sent successfully to test server");
-        }
-    } else {
-        ESP_LOGE(TAG, "HTTP POST request failed: %s", esp_err_to_name(err));
-    }
-    
-    esp_http_client_cleanup(client);
-    free(json_data);
-    
-    return err;
+
+    ESP_LOGI(TAG, "MQTT publish ok, msg_id=%d", msg_id);
+    return ESP_OK;
 }
 //wifi_end----------------------------------------------
 static sensor_data_t latest_sensor_data = {0};
@@ -392,9 +389,13 @@ void echo_task(void *arg)
     while (1) {
         // Read data from the UART
        uart_write_bytes(ECHO_UART_PORT_NUM, (const char *) request_data, sizeof(request_data));
+        log_uart1_bytes("UART1 TX", request_data, sizeof(request_data));
         // 增加等待时间让自动转换完成
         vTaskDelay(40 / portTICK_PERIOD_MS);  
         int len = uart_read_bytes(ECHO_UART_PORT_NUM, data, (BUF_SIZE - 1), 20 / portTICK_PERIOD_MS);
+        if (len > 0) {
+            log_uart1_bytes("UART1 RX", data, len);
+        }
         // Write data back to the UART
         vTaskDelay(40 / portTICK_PERIOD_MS);  
         if (len>=19&&data[0]==0x01&&data[1]==0x03&&data[2]==0x10) {  // 修改长度检查以适应新增的盐分数据
@@ -456,18 +457,22 @@ void network_task(void *arg)
     const uint32_t send_interval = 10000; // 10秒
     
     while(1) {
+        if (is_network_ready()) {
+            mqtt_start();
+        }
+
         if(is_network_ready() && new_data_available) {
             uint32_t current_time = xTaskGetTickCount() * portTICK_PERIOD_MS;
             // 检查是否到了发送时间
             if(current_time - last_send_time >= send_interval || last_send_time == 0) {
                 // 获取数据并发送
                 if(xSemaphoreTake(data_mutex, portMAX_DELAY) == pdTRUE) {
-                    esp_err_t ret = send_sensor_data_to_server(&latest_sensor_data);
+                    esp_err_t ret = mqtt_publish_sensor_data(&latest_sensor_data);
                     if (ret == ESP_OK) {
-                        ESP_LOGI(TAG, "json数据发送成功");
+                        ESP_LOGI(TAG, "MQTT数据发送成功");
                         last_send_time = current_time; // 更新发送时间
                     } else {
-                        ESP_LOGE(TAG, "json数据发送失败: %s", esp_err_to_name(ret));
+                        ESP_LOGE(TAG, "MQTT数据发送失败: %s", esp_err_to_name(ret));
                     }
                     new_data_available = false;
                     xSemaphoreGive(data_mutex);

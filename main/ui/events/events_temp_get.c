@@ -115,7 +115,7 @@ void update_sensor_display(lv_ui *ui)
             
             // 更新温度显示 (screen_label_2)
             if (ui->screen_label_2) {
-                snprintf(buffer, sizeof(buffer), "温度: %.1f°", sensor_data.temperature);
+                snprintf(buffer, sizeof(buffer), "温度: %.1f度", sensor_data.temperature);
                 lv_label_set_text(ui->screen_label_2, buffer);
                 printf("Updated screen_label_2 to %s\n", buffer);
             }

@@ -1,5 +1,5 @@
 /*
-* Copyright 2025 NXP
+* Copyright 2026 NXP
 * NXP Proprietary. This software is owned or controlled by NXP and may only be used strictly in
 * accordance with the applicable license terms. By expressly accepting such terms or by downloading, installing,
 * activating and/or otherwise using the software, you are agreeing that you have read, and that you agree to
@@ -38,8 +38,6 @@ typedef struct
 	lv_obj_t *screen_cont_1;
 	lv_obj_t *screen_label_1;
 	lv_obj_t *screen_label_2;
-	lv_obj_t *screen_spangroup_1;
-	lv_span_t *screen_spangroup_1_span;
 	lv_obj_t *screen_sitting;
 	lv_obj_t *screen_sitting_label;
 	lv_obj_t *screen_more;
@@ -52,6 +50,8 @@ typedef struct
 	lv_obj_t *screen_danger_2;
 	lv_obj_t *screen_danger_3;
 	lv_obj_t *screen_danger_4;
+	lv_obj_t *screen_wifi_off;
+	lv_obj_t *screen_wifi_on;
 	lv_obj_t *sitting_scr;
 	bool sitting_scr_del;
 	lv_obj_t *sitting_scr_menu_1;
@@ -66,17 +66,29 @@ typedef struct
 	lv_obj_t *sitting_scr_menu_1_cont_3;
 	lv_obj_t *sitting_scr_menu_1_label_3;
 	lv_obj_t *sitting_scr_cont_1;
-	lv_obj_t *sitting_scr_spangroup_2;
-	lv_span_t *sitting_scr_spangroup_2_span;
+	lv_obj_t *sitting_scr_wif_conn_load;
+	lv_span_t *sitting_scr_wif_conn_load_span;
 	lv_obj_t *sitting_scr_spinner_1;
-	lv_obj_t *sitting_scr_spangroup_1;
-	lv_span_t *sitting_scr_spangroup_1_span;
+	lv_obj_t *sitting_scr_wifi_conn_unsucc;
+	lv_span_t *sitting_scr_wifi_conn_unsucc_span;
+	lv_obj_t *sitting_scr_wifi_conn_succ;
+	lv_span_t *sitting_scr_wifi_conn_succ_span;
 	lv_obj_t *sitting_scr_qrcode_1;
+	lv_obj_t *sitting_scr_wifi_Incorrect_password;
+	lv_span_t *sitting_scr_wifi_Incorrect_password_span;
+	lv_obj_t *sitting_scr_WIFI_TITLE;
+	lv_span_t *sitting_scr_WIFI_TITLE_span;
 	lv_obj_t *sitting_scr_cb_1;
 	lv_obj_t *sitting_scr_cb_2;
 	lv_obj_t *sitting_scr_cb_3;
 	lv_obj_t *sitting_scr_cb_4;
 	lv_obj_t *sitting_scr_cb_5;
+	lv_obj_t *sitting_scr_btn_2;
+	lv_obj_t *sitting_scr_btn_2_label;
+	lv_obj_t *sitting_scr_sw_1;
+	lv_obj_t *sitting_scr_label_1;
+	lv_obj_t *sitting_scr_btn_1;
+	lv_obj_t *sitting_scr_btn_1_label;
 	lv_obj_t *sitting_scr_back_1;
 	lv_obj_t *sitting_scr_back_1_label;
 	lv_obj_t *more_scr;
@@ -132,12 +144,11 @@ LV_IMAGE_DECLARE(_waring_RGB565A8_20x20);
 
 LV_FONT_DECLARE(lv_font_YouSheYuFeiTeJianKangTi_2_16)
 LV_FONT_DECLARE(lv_font_YouSheYuFeiTeJianKangTi_2_18)
-LV_FONT_DECLARE(lv_font_montserratMedium_18)
-LV_FONT_DECLARE(lv_font_HYPixel11pxU_2_18)
+LV_FONT_DECLARE(lv_font_icon_zero_two_18)
 LV_FONT_DECLARE(lv_font_YouSheYuFeiTeJianKangTi_2_12)
 LV_FONT_DECLARE(lv_font_YouSheYuFeiTeJianKangTi_2_20)
 LV_FONT_DECLARE(lv_font_montserratMedium_16)
-LV_FONT_DECLARE(lv_font_montserratMedium_12)
+LV_FONT_DECLARE(lv_font_HYPixel11pxU_2_18)
 
 
 #ifdef __cplusplus

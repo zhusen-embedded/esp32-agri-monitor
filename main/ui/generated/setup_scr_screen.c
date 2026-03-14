@@ -1,5 +1,5 @@
 /*
-* Copyright 2025 NXP
+* Copyright 2026 NXP
 * NXP Proprietary. This software is owned or controlled by NXP and may only be used strictly in
 * accordance with the applicable license terms. By expressly accepting such terms or by downloading, installing,
 * activating and/or otherwise using the software, you are agreeing that you have read, and that you agree to
@@ -35,7 +35,7 @@ void setup_scr_screen(lv_ui *ui)
     lv_obj_set_size(ui->screen_jia_bar, 90, 20);
     lv_obj_set_style_anim_duration(ui->screen_jia_bar, 400, 0);
     lv_bar_set_mode(ui->screen_jia_bar, LV_BAR_MODE_NORMAL);
-    lv_bar_set_range(ui->screen_jia_bar, 0, 300);
+    lv_bar_set_range(ui->screen_jia_bar, 0, 600);
     lv_bar_set_value(ui->screen_jia_bar, 100, LV_ANIM_OFF);
 
     //Write style for screen_jia_bar, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
@@ -57,7 +57,7 @@ void setup_scr_screen(lv_ui *ui)
     lv_obj_set_size(ui->screen_ling_bar, 71, 20);
     lv_obj_set_style_anim_duration(ui->screen_ling_bar, 400, 0);
     lv_bar_set_mode(ui->screen_ling_bar, LV_BAR_MODE_NORMAL);
-    lv_bar_set_range(ui->screen_ling_bar, 0, 50);
+    lv_bar_set_range(ui->screen_ling_bar, 0, 100);
     lv_bar_set_value(ui->screen_ling_bar, 20, LV_ANIM_OFF);
 
     //Write style for screen_ling_bar, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
@@ -279,7 +279,7 @@ void setup_scr_screen(lv_ui *ui)
     lv_obj_set_size(ui->screen_bar_1, 47, 20);
     lv_obj_set_style_anim_duration(ui->screen_bar_1, 400, 0);
     lv_bar_set_mode(ui->screen_bar_1, LV_BAR_MODE_NORMAL);
-    lv_bar_set_range(ui->screen_bar_1, 0, 100);
+    lv_bar_set_range(ui->screen_bar_1, 0, 200);
     lv_bar_set_value(ui->screen_bar_1, 50, LV_ANIM_OFF);
 
     //Write style for screen_bar_1, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
@@ -339,8 +339,8 @@ void setup_scr_screen(lv_ui *ui)
     //Write codes screen_label_2
     ui->screen_label_2 = lv_label_create(ui->screen_cont_1);
     lv_obj_set_pos(ui->screen_label_2, 10, 4);
-    lv_obj_set_size(ui->screen_label_2, 81, 17);
-    lv_label_set_text(ui->screen_label_2, "温度:26.5");
+    lv_obj_set_size(ui->screen_label_2, 91, 17);
+    lv_label_set_text(ui->screen_label_2, "温度:26.5度");
     lv_label_set_long_mode(ui->screen_label_2, LV_LABEL_LONG_WRAP);
 
     //Write style for screen_label_2, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
@@ -358,35 +358,6 @@ void setup_scr_screen(lv_ui *ui)
     lv_obj_set_style_pad_bottom(ui->screen_label_2, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_pad_left(ui->screen_label_2, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_shadow_width(ui->screen_label_2, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
-
-    //Write codes screen_spangroup_1
-    ui->screen_spangroup_1 = lv_spangroup_create(ui->screen);
-    lv_obj_set_pos(ui->screen_spangroup_1, 82, 3);
-    lv_obj_set_size(ui->screen_spangroup_1, 23, 20);
-    lv_spangroup_set_align(ui->screen_spangroup_1, LV_TEXT_ALIGN_LEFT);
-    lv_spangroup_set_overflow(ui->screen_spangroup_1, LV_SPAN_OVERFLOW_CLIP);
-    lv_spangroup_set_mode(ui->screen_spangroup_1, LV_SPAN_MODE_BREAK);
-    //create span
-    ui->screen_spangroup_1_span = lv_spangroup_new_span(ui->screen_spangroup_1);
-    lv_span_set_text(ui->screen_spangroup_1_span, "°C");
-    lv_style_set_text_color(lv_span_get_style(ui->screen_spangroup_1_span), lv_color_hex(0x000000));
-    lv_style_set_text_decor(lv_span_get_style(ui->screen_spangroup_1_span), LV_TEXT_DECOR_NONE);
-    lv_style_set_text_font(lv_span_get_style(ui->screen_spangroup_1_span), &lv_font_montserratMedium_18);
-
-    //Write style state: LV_STATE_DEFAULT for &style_screen_spangroup_1_main_main_default
-    static lv_style_t style_screen_spangroup_1_main_main_default;
-    ui_init_style(&style_screen_spangroup_1_main_main_default);
-
-    lv_style_set_bg_opa(&style_screen_spangroup_1_main_main_default, 0);
-    lv_style_set_border_width(&style_screen_spangroup_1_main_main_default, 0);
-    lv_style_set_radius(&style_screen_spangroup_1_main_main_default, 0);
-    lv_style_set_shadow_width(&style_screen_spangroup_1_main_main_default, 0);
-    lv_style_set_pad_top(&style_screen_spangroup_1_main_main_default, 0);
-    lv_style_set_pad_bottom(&style_screen_spangroup_1_main_main_default, 0);
-    lv_style_set_pad_left(&style_screen_spangroup_1_main_main_default, 0);
-    lv_style_set_pad_right(&style_screen_spangroup_1_main_main_default, 0);
-    lv_obj_add_style(ui->screen_spangroup_1, &style_screen_spangroup_1_main_main_default, LV_PART_MAIN|LV_STATE_DEFAULT);
-    lv_spangroup_refr_mode(ui->screen_spangroup_1);
 
     //Write codes screen_sitting
     ui->screen_sitting = lv_button_create(ui->screen);
@@ -412,13 +383,13 @@ void setup_scr_screen(lv_ui *ui)
     lv_obj_set_style_shadow_offset_x(ui->screen_sitting, 1, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_shadow_offset_y(ui->screen_sitting, 2, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(ui->screen_sitting, lv_color_hex(0xffffff), LV_PART_MAIN|LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui->screen_sitting, &lv_font_HYPixel11pxU_2_18, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui->screen_sitting, &lv_font_YouSheYuFeiTeJianKangTi_2_18, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui->screen_sitting, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_align(ui->screen_sitting, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN|LV_STATE_DEFAULT);
 
     //Write codes screen_more
     ui->screen_more = lv_button_create(ui->screen);
-    lv_obj_set_pos(ui->screen_more, 122, 177);
+    lv_obj_set_pos(ui->screen_more, 123, 177);
     lv_obj_set_size(ui->screen_more, 76, 43);
     ui->screen_more_label = lv_label_create(ui->screen_more);
     lv_label_set_text(ui->screen_more_label, "详细");
@@ -440,7 +411,7 @@ void setup_scr_screen(lv_ui *ui)
     lv_obj_set_style_shadow_offset_x(ui->screen_more, 1, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_shadow_offset_y(ui->screen_more, 2, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(ui->screen_more, lv_color_hex(0xffffff), LV_PART_MAIN|LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui->screen_more, &lv_font_HYPixel11pxU_2_18, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui->screen_more, &lv_font_YouSheYuFeiTeJianKangTi_2_18, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui->screen_more, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_align(ui->screen_more, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN|LV_STATE_DEFAULT);
 
@@ -559,6 +530,53 @@ void setup_scr_screen(lv_ui *ui)
     lv_obj_set_style_image_recolor_opa(ui->screen_danger_4, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_image_recolor(ui->screen_danger_4, lv_color_hex(0xf00000), LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_image_opa(ui->screen_danger_4, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
+
+    //Write codes screen_wifi_off
+    ui->screen_wifi_off = lv_label_create(ui->screen);
+    lv_obj_set_pos(ui->screen_wifi_off, 195, 4);
+    lv_obj_set_size(ui->screen_wifi_off, 44, 16);
+    lv_label_set_text(ui->screen_wifi_off, "");
+    lv_label_set_long_mode(ui->screen_wifi_off, LV_LABEL_LONG_WRAP);
+
+    //Write style for screen_wifi_off, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
+    lv_obj_set_style_border_width(ui->screen_wifi_off, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(ui->screen_wifi_off, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui->screen_wifi_off, lv_color_hex(0x000000), LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui->screen_wifi_off, &lv_font_icon_zero_two_18, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui->screen_wifi_off, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_letter_space(ui->screen_wifi_off, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_line_space(ui->screen_wifi_off, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_align(ui->screen_wifi_off, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui->screen_wifi_off, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(ui->screen_wifi_off, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(ui->screen_wifi_off, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_bottom(ui->screen_wifi_off, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_left(ui->screen_wifi_off, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(ui->screen_wifi_off, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+
+    //Write codes screen_wifi_on
+    ui->screen_wifi_on = lv_label_create(ui->screen);
+    lv_obj_set_pos(ui->screen_wifi_on, 195, 4);
+    lv_obj_set_size(ui->screen_wifi_on, 44, 16);
+    lv_obj_add_flag(ui->screen_wifi_on, LV_OBJ_FLAG_HIDDEN);
+    lv_label_set_text(ui->screen_wifi_on, "");
+    lv_label_set_long_mode(ui->screen_wifi_on, LV_LABEL_LONG_WRAP);
+
+    //Write style for screen_wifi_on, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
+    lv_obj_set_style_border_width(ui->screen_wifi_on, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(ui->screen_wifi_on, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui->screen_wifi_on, lv_color_hex(0x000000), LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui->screen_wifi_on, &lv_font_icon_zero_two_18, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui->screen_wifi_on, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_letter_space(ui->screen_wifi_on, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_line_space(ui->screen_wifi_on, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_align(ui->screen_wifi_on, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_opa(ui->screen_wifi_on, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_top(ui->screen_wifi_on, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_right(ui->screen_wifi_on, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_bottom(ui->screen_wifi_on, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_pad_left(ui->screen_wifi_on, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(ui->screen_wifi_on, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
 
     //The custom code of screen.
 

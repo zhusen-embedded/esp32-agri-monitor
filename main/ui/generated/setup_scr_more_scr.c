@@ -1,5 +1,5 @@
 /*
-* Copyright 2025 NXP
+* Copyright 2026 NXP
 * NXP Proprietary. This software is owned or controlled by NXP and may only be used strictly in
 * accordance with the applicable license terms. By expressly accepting such terms or by downloading, installing,
 * activating and/or otherwise using the software, you are agreeing that you have read, and that you agree to
@@ -109,13 +109,9 @@ void setup_scr_more_scr(lv_ui *ui)
     lv_obj_t * more_scr_more_ss_tab_2_label = lv_label_create(ui->more_scr_more_ss_tab_2);
     lv_label_set_text(more_scr_more_ss_tab_2_label, "con2");
 
-    //Write codes tab3
-    lv_obj_t * more_scr_more_ss_tab_3_label = lv_label_create(ui->more_scr_more_ss_tab_3);
-    lv_label_set_text(more_scr_more_ss_tab_3_label, "con3");
-
     //Write codes more_scr_tab_2
-    ui->more_scr_tab_2 = lv_obj_create(ui->more_scr);
-    lv_obj_set_pos(ui->more_scr_tab_2, 54, -214);
+    ui->more_scr_tab_2 = lv_obj_create(ui->more_scr_more_ss_tab_2);
+    lv_obj_set_pos(ui->more_scr_tab_2, -15, -21);
     lv_obj_set_size(ui->more_scr_tab_2, 274, 200);
     lv_obj_set_scrollbar_mode(ui->more_scr_tab_2, LV_SCROLLBAR_MODE_OFF);
 
@@ -164,8 +160,8 @@ void setup_scr_more_scr(lv_ui *ui)
 
     //Write codes more_scr_label_1
     ui->more_scr_label_1 = lv_label_create(ui->more_scr_tab_2);
-    lv_obj_set_pos(ui->more_scr_label_1, 26, 174);
-    lv_obj_set_size(ui->more_scr_label_1, 41, 13);
+    lv_obj_set_pos(ui->more_scr_label_1, 24, 174);
+    lv_obj_set_size(ui->more_scr_label_1, 41, 22);
     lv_label_set_text(ui->more_scr_label_1, "氮");
     lv_label_set_long_mode(ui->more_scr_label_1, LV_LABEL_LONG_WRAP);
 
@@ -173,7 +169,7 @@ void setup_scr_more_scr(lv_ui *ui)
     lv_obj_set_style_border_width(ui->more_scr_label_1, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_radius(ui->more_scr_label_1, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(ui->more_scr_label_1, lv_color_hex(0x000000), LV_PART_MAIN|LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui->more_scr_label_1, &lv_font_montserratMedium_12, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui->more_scr_label_1, &lv_font_YouSheYuFeiTeJianKangTi_2_16, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui->more_scr_label_1, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_letter_space(ui->more_scr_label_1, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_line_space(ui->more_scr_label_1, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
@@ -187,8 +183,8 @@ void setup_scr_more_scr(lv_ui *ui)
 
     //Write codes more_scr_label_2
     ui->more_scr_label_2 = lv_label_create(ui->more_scr_tab_2);
-    lv_obj_set_pos(ui->more_scr_label_2, 178, 173);
-    lv_obj_set_size(ui->more_scr_label_2, 37, 12);
+    lv_obj_set_pos(ui->more_scr_label_2, 174, 174);
+    lv_obj_set_size(ui->more_scr_label_2, 37, 24);
     lv_label_set_text(ui->more_scr_label_2, "钾");
     lv_label_set_long_mode(ui->more_scr_label_2, LV_LABEL_LONG_WRAP);
 
@@ -196,7 +192,7 @@ void setup_scr_more_scr(lv_ui *ui)
     lv_obj_set_style_border_width(ui->more_scr_label_2, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_radius(ui->more_scr_label_2, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(ui->more_scr_label_2, lv_color_hex(0x000000), LV_PART_MAIN|LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui->more_scr_label_2, &lv_font_montserratMedium_12, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui->more_scr_label_2, &lv_font_YouSheYuFeiTeJianKangTi_2_16, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui->more_scr_label_2, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_letter_space(ui->more_scr_label_2, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_line_space(ui->more_scr_label_2, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
@@ -210,8 +206,8 @@ void setup_scr_more_scr(lv_ui *ui)
 
     //Write codes more_scr_label_3
     ui->more_scr_label_3 = lv_label_create(ui->more_scr_tab_2);
-    lv_obj_set_pos(ui->more_scr_label_3, 102, 174);
-    lv_obj_set_size(ui->more_scr_label_3, 37, 12);
+    lv_obj_set_pos(ui->more_scr_label_3, 99, 174);
+    lv_obj_set_size(ui->more_scr_label_3, 38, 24);
     lv_label_set_text(ui->more_scr_label_3, "磷");
     lv_label_set_long_mode(ui->more_scr_label_3, LV_LABEL_LONG_WRAP);
 
@@ -219,7 +215,7 @@ void setup_scr_more_scr(lv_ui *ui)
     lv_obj_set_style_border_width(ui->more_scr_label_3, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_radius(ui->more_scr_label_3, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_color(ui->more_scr_label_3, lv_color_hex(0x000000), LV_PART_MAIN|LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui->more_scr_label_3, &lv_font_montserratMedium_12, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui->more_scr_label_3, &lv_font_YouSheYuFeiTeJianKangTi_2_16, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_opa(ui->more_scr_label_3, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_letter_space(ui->more_scr_label_3, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_text_line_space(ui->more_scr_label_3, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
@@ -231,9 +227,13 @@ void setup_scr_more_scr(lv_ui *ui)
     lv_obj_set_style_pad_left(ui->more_scr_label_3, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_shadow_width(ui->more_scr_label_3, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
 
+    //Write codes tab3
+    lv_obj_t * more_scr_more_ss_tab_3_label = lv_label_create(ui->more_scr_more_ss_tab_3);
+    lv_label_set_text(more_scr_more_ss_tab_3_label, "con3");
+
     //Write codes more_scr_btn_2
     ui->more_scr_btn_2 = lv_button_create(ui->more_scr);
-    lv_obj_set_pos(ui->more_scr_btn_2, 240, 174);
+    lv_obj_set_pos(ui->more_scr_btn_2, 246, 186);
     lv_obj_set_size(ui->more_scr_btn_2, 53, 40);
     ui->more_scr_btn_2_label = lv_label_create(ui->more_scr_btn_2);
     lv_label_set_text(ui->more_scr_btn_2_label, "返回");
