@@ -19,6 +19,20 @@
 #include "events_manager.h"
 #include "ble_sitting_wifi/ble_sitting_wifi.h"
 #include "esp_psram.h" // 或者 esp_heap_caps.h
+
+static volatile uint32_t s_lvgl_task_delay_ms = 10;
+
+void set_lvgl_task_delay_ms(uint32_t delay_ms)
+{
+    if (delay_ms < 5) {
+        delay_ms = 5;
+    }
+    if (delay_ms > 200) {
+        delay_ms = 200;
+    }
+    s_lvgl_task_delay_ms = delay_ms;
+    printf("LVGL task delay set to %lu ms\n", (unsigned long)s_lvgl_task_delay_ms);
+}
 // 显示屏引脚定义
 #define LCD_HOST SPI2_HOST
 #define LCD_PIN_SCLK     11
@@ -64,7 +78,7 @@ static void __attribute__((unused)) lvgl_task(void *pvParameter)
             xSemaphoreGive(xGuiSemaphore);
         }
         // 短暂延迟以允许其他任务运行
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(pdMS_TO_TICKS(s_lvgl_task_delay_ms));
     }
 }
 

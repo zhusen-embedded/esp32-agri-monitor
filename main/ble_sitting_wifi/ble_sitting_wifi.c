@@ -564,6 +564,11 @@ esp_err_t ble_wifi_force_reprovision(void)
     return ESP_OK;
 }
 
+bool ble_wifi_is_client_connected(void)
+{
+    return s_conn_handle != BLE_HS_CONN_HANDLE_NONE;
+}
+
 static esp_err_t ensure_base_inited(void)
 {
     esp_err_t err = nvs_flash_init();

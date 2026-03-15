@@ -13,6 +13,9 @@ extern "C" {
 // 启动传感器数据自动更新
 void start_sensor_data_updates(lv_ui *ui);
 
+// 动态设置传感器数据显示刷新周期
+void set_sensor_update_interval_ms(uint32_t interval_ms);
+
 // 强制立即更新传感器显示
 void force_sensor_display_update(lv_ui *ui);
 

@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include "../uart_echo_wifi_ble/uart_echo_wifi_ble.h"
 
+static lv_timer_t *s_sensor_timer = NULL;
+
 static void update_npk_chart(lv_ui *ui, const sensor_data_t *sensor_data)
 {
     if (!ui || !sensor_data || !ui->more_scr_chart_1 || !ui->more_scr_chart_1_0) {
@@ -188,15 +190,33 @@ static void sensor_update_timer_cb(lv_timer_t *timer)
 void start_sensor_data_updates(lv_ui *ui)
 {
     printf("Starting sensor data updates with 5-second interval...\n");
-    
-    // 创建一个定时器，每5000ms检查并更新传感器数据
-    lv_timer_t *sensor_timer = lv_timer_create(sensor_update_timer_cb, 5000, ui);
-    if (sensor_timer == NULL) {
-        printf("Failed to create sensor update timer\n");
-        return;
+
+    if (s_sensor_timer == NULL) {
+        // 创建一个定时器，每5000ms检查并更新传感器数据
+        s_sensor_timer = lv_timer_create(sensor_update_timer_cb, 5000, ui);
+        if (s_sensor_timer == NULL) {
+            printf("Failed to create sensor update timer\n");
+            return;
+        }
+    } else {
+        lv_timer_set_user_data(s_sensor_timer, ui);
+        lv_timer_set_period(s_sensor_timer, 5000);
     }
     
     printf("Sensor data update timer started successfully with 5-second interval\n");
+}
+
+void set_sensor_update_interval_ms(uint32_t interval_ms)
+{
+    if (s_sensor_timer == NULL) {
+        return;
+    }
+
+    if (interval_ms < 500) {
+        interval_ms = 500;
+    }
+    lv_timer_set_period(s_sensor_timer, interval_ms);
+    printf("Sensor UI update interval set to %lu ms\n", (unsigned long)interval_ms);
 }
 
 // 手动触发一次传感器数据显示更新

@@ -178,10 +178,10 @@ static sensor_data_t apply_median_filter(sensor_data_t *new_data) {
 #define WIFI_SSID "Redmi K60 Ultra"
 #define WIFI_PASSWORD "88888888"
 
-#define MQTT_BROKER_URI "mqtts://e31aa9b0.ala.cn-hangzhou.emqxsl.cn:8883"
-#define MQTT_USERNAME "admin"
+#define MQTT_BROKER_URI "mqtts://x8f11715.ala.cn-hangzhou.emqxsl.cn:8883"
+#define MQTT_USERNAME "username"
 #define MQTT_PASSWORD "123456"
-#define MQTT_TOPIC_BASE "soil"
+#define MQTT_TOPIC_BASE "esp32/sensor/json"
 //***************************************
 float convert_moisture(uint16_t raw_value) { return (float)raw_value / 10.0; }
 float convert_conductivity(uint16_t raw_value) { return (float)raw_value; }
@@ -227,15 +227,6 @@ void wifi_init_sta(void)
     // 注册事件处理
     ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, NULL));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, NULL));
-
-    wifi_config_t wifi_config = {
-        .sta = {
-            .ssid = WIFI_SSID,
-            .password = WIFI_PASSWORD,
-            .threshold.authmode = WIFI_AUTH_WPA2_PSK,
-            // .sae_pwe_h2e = WPA3_SAE_PWE_BOTH,
-        },
-    };
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     // ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
@@ -360,6 +351,18 @@ static esp_err_t mqtt_publish_sensor_data(sensor_data_t *sensor_data)
 static sensor_data_t latest_sensor_data = {0};
 static bool new_data_available = false;
 static SemaphoreHandle_t data_mutex = NULL;
+static volatile bool s_sensor_low_power_mode = false;
+
+void set_sensor_low_power_mode(bool enabled)
+{
+    s_sensor_low_power_mode = enabled;
+    ESP_LOGI(TAG, "Sensor low power mode: %s", enabled ? "ON" : "OFF");
+}
+
+bool get_sensor_low_power_mode(void)
+{
+    return s_sensor_low_power_mode;
+}
 //串口初始化
 void echo_task(void *arg)
 {
@@ -387,17 +390,19 @@ void echo_task(void *arg)
     uint8_t *data = (uint8_t *) malloc(BUF_SIZE);
     uint8_t request_data[] = {0x01, 0x03, 0x00, 0x00, 0x00, 0x08, 0x44, 0x0C}; 
     while (1) {
+        uint32_t settle_delay_ms = s_sensor_low_power_mode ? 120 : 40;
+        uint32_t read_timeout_ms = s_sensor_low_power_mode ? 120 : 20;
+        uint32_t sample_interval_ms = s_sensor_low_power_mode ? 5000 : 1000;
+
         // Read data from the UART
-       uart_write_bytes(ECHO_UART_PORT_NUM, (const char *) request_data, sizeof(request_data));
+        uart_write_bytes(ECHO_UART_PORT_NUM, (const char *) request_data, sizeof(request_data));
         log_uart1_bytes("UART1 TX", request_data, sizeof(request_data));
         // 增加等待时间让自动转换完成
-        vTaskDelay(40 / portTICK_PERIOD_MS);  
-        int len = uart_read_bytes(ECHO_UART_PORT_NUM, data, (BUF_SIZE - 1), 20 / portTICK_PERIOD_MS);
+        vTaskDelay(pdMS_TO_TICKS(settle_delay_ms));
+        int len = uart_read_bytes(ECHO_UART_PORT_NUM, data, (BUF_SIZE - 1), pdMS_TO_TICKS(read_timeout_ms));
         if (len > 0) {
             log_uart1_bytes("UART1 RX", data, len);
         }
-        // Write data back to the UART
-        vTaskDelay(40 / portTICK_PERIOD_MS);  
         if (len>=19&&data[0]==0x01&&data[1]==0x03&&data[2]==0x10) {  // 修改长度检查以适应新增的盐分数据
             data[len] = '\0';
             uint16_t moisture_raw = (data[3] << 8) | data[4];     // 含水率原始值
@@ -443,9 +448,10 @@ void echo_task(void *arg)
                     xSemaphoreGive(data_mutex);
                 }
             }
-        //尝试发送数据(阻塞)
-         vTaskDelay(1000 / portTICK_PERIOD_MS);  //每秒判断采集一次
         }
+
+        // 统一采样周期，省电模式下放慢串口轮询。
+        vTaskDelay(pdMS_TO_TICKS(sample_interval_ms));
     }
 }
 

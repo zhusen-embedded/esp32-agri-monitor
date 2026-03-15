@@ -3,10 +3,12 @@
 #include "events_manager.h"
 #include "events_temp_get.h"
 #include "ble_sitting_wifi/ble_wifi_page.h"
+#include "ble_sitting_wifi/ble_sitting_wifi.h"
 #include "../generated/events_init.h"
 #include <stdio.h>
 #include "esp_event.h"
 #include "esp_netif.h"
+#include "esp_system.h"
 #include "esp_wifi.h"
 #include "lvgl.h"
 #include <stdint.h>
@@ -20,8 +22,12 @@ static lv_obj_t *s_bound_cb_2 = NULL;
 static lv_obj_t *s_bound_cb_3 = NULL;
 static lv_obj_t *s_bound_cb_4 = NULL;
 static lv_obj_t *s_bound_cb_5 = NULL;
+static lv_obj_t *s_bound_btn_reset = NULL;
+static lv_obj_t *s_bound_btn_reprovision = NULL;
+static lv_obj_t *s_bound_sw_power = NULL;
 
 static void wifi_menu_event_handler(lv_event_t *e);
+extern void set_lvgl_task_delay_ms(uint32_t delay_ms);
 
 typedef enum {
     HOME_ITEM_TEMPERATURE = 0,
@@ -173,6 +179,49 @@ static void home_item_checkbox_event_handler(lv_event_t *e)
     set_home_item_visible(item, visible);
 }
 
+static void apply_power_save_mode(bool enabled)
+{
+    set_sensor_low_power_mode(enabled);
+    set_sensor_update_interval_ms(enabled ? 15000 : 5000);
+    set_lvgl_task_delay_ms(enabled ? 40 : 10);
+    printf("Power save mode %s\n", enabled ? "ON" : "OFF");
+}
+
+static void power_save_switch_event_handler(lv_event_t *e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_VALUE_CHANGED) {
+        return;
+    }
+
+    lv_obj_t *sw = lv_event_get_target(e);
+    bool enabled = lv_obj_has_state(sw, LV_STATE_CHECKED);
+    apply_power_save_mode(enabled);
+}
+
+static void reset_system_event_handler(lv_event_t *e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED) {
+        return;
+    }
+
+    printf("System reset requested by UI button\n");
+    esp_restart();
+}
+
+static void reprovision_event_handler(lv_event_t *e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED) {
+        return;
+    }
+
+    printf("Force reprovision requested: clear saved WiFi and reboot\n");
+    esp_err_t err = ble_wifi_force_reprovision();
+    if (err != ESP_OK) {
+        printf("ble_wifi_force_reprovision failed: %s\n", esp_err_to_name(err));
+    }
+    esp_restart();
+}
+
 static void init_home_item_settings(lv_ui *ui)
 {
     if (!ui) {
@@ -242,6 +291,24 @@ static void bind_sitting_screen_events_if_needed(void)
         recreated = true;
     }
 
+    if (s_ui_ctx->sitting_scr_btn_1 && s_bound_btn_reset != s_ui_ctx->sitting_scr_btn_1) {
+        lv_obj_add_event_cb(s_ui_ctx->sitting_scr_btn_1, reset_system_event_handler, LV_EVENT_CLICKED, NULL);
+        s_bound_btn_reset = s_ui_ctx->sitting_scr_btn_1;
+        recreated = true;
+    }
+
+    if (s_ui_ctx->sitting_scr_btn_2 && s_bound_btn_reprovision != s_ui_ctx->sitting_scr_btn_2) {
+        lv_obj_add_event_cb(s_ui_ctx->sitting_scr_btn_2, reprovision_event_handler, LV_EVENT_CLICKED, NULL);
+        s_bound_btn_reprovision = s_ui_ctx->sitting_scr_btn_2;
+        recreated = true;
+    }
+
+    if (s_ui_ctx->sitting_scr_sw_1 && s_bound_sw_power != s_ui_ctx->sitting_scr_sw_1) {
+        lv_obj_add_event_cb(s_ui_ctx->sitting_scr_sw_1, power_save_switch_event_handler, LV_EVENT_VALUE_CHANGED, NULL);
+        s_bound_sw_power = s_ui_ctx->sitting_scr_sw_1;
+        recreated = true;
+    }
+
     if (recreated) {
         init_home_item_settings(s_ui_ctx);
         sync_checkbox_with_home_item(s_ui_ctx->sitting_scr_cb_1, HOME_ITEM_TEMPERATURE);
@@ -249,6 +316,15 @@ static void bind_sitting_screen_events_if_needed(void)
         sync_checkbox_with_home_item(s_ui_ctx->sitting_scr_cb_3, HOME_ITEM_PH);
         sync_checkbox_with_home_item(s_ui_ctx->sitting_scr_cb_4, HOME_ITEM_NPK);
         sync_checkbox_with_home_item(s_ui_ctx->sitting_scr_cb_5, HOME_ITEM_LIGHT);
+        if (s_ui_ctx->sitting_scr_sw_1) {
+            bool power_mode = get_sensor_low_power_mode();
+            if (power_mode) {
+                lv_obj_add_state(s_ui_ctx->sitting_scr_sw_1, LV_STATE_CHECKED);
+            } else {
+                lv_obj_clear_state(s_ui_ctx->sitting_scr_sw_1, LV_STATE_CHECKED);
+            }
+            apply_power_save_mode(power_mode);
+        }
         printf("Sitting screen events rebound\n");
     }
 }
@@ -276,8 +352,10 @@ static void apply_wifi_status_ui(void)
 
     switch (s_wifi_ui_state) {
         case WIFI_UI_CONNECTING:
-            lv_obj_clear_flag(s_ui_ctx->sitting_scr_wif_conn_load, LV_OBJ_FLAG_HIDDEN);
-            lv_obj_clear_flag(s_ui_ctx->sitting_scr_spinner_1, LV_OBJ_FLAG_HIDDEN);
+            if (ble_wifi_is_client_connected()) {
+                lv_obj_clear_flag(s_ui_ctx->sitting_scr_wif_conn_load, LV_OBJ_FLAG_HIDDEN);
+                lv_obj_clear_flag(s_ui_ctx->sitting_scr_spinner_1, LV_OBJ_FLAG_HIDDEN);
+            }
             break;
         case WIFI_UI_CONNECTED:
             lv_obj_clear_flag(s_ui_ctx->sitting_scr_wifi_conn_succ, LV_OBJ_FLAG_HIDDEN);

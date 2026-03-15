@@ -13,6 +13,7 @@
 #include "freertos/semphr.h"
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 #include "esp_mac.h"
 #include "esp_system.h"
 
@@ -43,5 +44,7 @@ float convert_ph(uint16_t raw_value);
 float convert_salinity(uint16_t raw_value);
 float convert_temperature(uint16_t raw_value);
 bool get_sensor_data(sensor_data_t *data, bool *has_new_data);
+void set_sensor_low_power_mode(bool enabled);
+bool get_sensor_low_power_mode(void);
 
 #endif // _UART_ECHO_WIFI_BLE_H
