@@ -162,6 +162,13 @@ void update_sensor_display(lv_ui *ui)
                 printf("Updated screen_label_2 to %s\n", buffer);
             }
 
+            // 更新光照显示 (screen_label_1)
+            if (ui->screen_label_1) {
+                snprintf(buffer, sizeof(buffer), "光照: %.1f lx", sensor_data.light);
+                lv_label_set_text(ui->screen_label_1, buffer);
+                printf("Updated screen_label_1 to %s\n", buffer);
+            }
+
             // 更新 more_scr 的 N/P/K 图表
             update_npk_chart(ui, &sensor_data);
             

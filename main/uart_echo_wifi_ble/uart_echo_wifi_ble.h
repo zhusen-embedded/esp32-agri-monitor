@@ -31,6 +31,7 @@ typedef struct {
     float phosphorus;
     float potassium;
     float salinity;
+    float light;
 } sensor_data_t;
 
 // 函数声明

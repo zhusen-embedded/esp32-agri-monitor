@@ -7,6 +7,7 @@
 #include "../generated/events_init.h"
 #include <stdio.h>
 #include "esp_event.h"
+#include "esp_mac.h"
 #include "esp_netif.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
@@ -46,6 +47,31 @@ typedef enum {
 } wifi_ui_state_t;
 
 static wifi_ui_state_t s_wifi_ui_state = WIFI_UI_IDLE;
+
+static void update_provisioning_qrcode(void)
+{
+    if (!s_ui_ctx || !s_ui_ctx->sitting_scr_qrcode_1) {
+        return;
+    }
+
+    uint8_t mac[6] = {0};
+    if (esp_read_mac(mac, ESP_MAC_WIFI_STA) != ESP_OK) {
+        return;
+    }
+
+    char dev_name[20] = {0};
+    snprintf(dev_name, sizeof(dev_name), "TEMP_%02X%02X%02X", mac[3], mac[4], mac[5]);
+
+    char qr_data[128] = {0};
+    int qr_len = snprintf(qr_data, sizeof(qr_data),
+                          "{\"ver\":\"v1\",\"name\":\"%s\",\"pop\":\"abcd1234\",\"transport\":\"ble\"}",
+                          dev_name);
+    if (qr_len <= 0 || qr_len >= (int)sizeof(qr_data)) {
+        return;
+    }
+
+    lv_qrcode_update(s_ui_ctx->sitting_scr_qrcode_1, qr_data, (uint32_t)qr_len);
+}
 
 static bool is_wifi_connected(void)
 {
@@ -310,6 +336,7 @@ static void bind_sitting_screen_events_if_needed(void)
     }
 
     if (recreated) {
+        update_provisioning_qrcode();
         init_home_item_settings(s_ui_ctx);
         sync_checkbox_with_home_item(s_ui_ctx->sitting_scr_cb_1, HOME_ITEM_TEMPERATURE);
         sync_checkbox_with_home_item(s_ui_ctx->sitting_scr_cb_2, HOME_ITEM_HUMIDITY);
@@ -424,6 +451,7 @@ void init_custom_events(lv_ui *ui)
     s_ui_ctx = ui;
     start_sensor_data_updates(ui);
     bind_sitting_screen_events_if_needed();
+    update_provisioning_qrcode();
 
     update_wifi_icon();
     if (s_wifi_timer == NULL) {

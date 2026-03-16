@@ -3,6 +3,7 @@
 #include "esp_log.h"
 #include "mqtt_client.h"
 #include "esp_crt_bundle.h"
+#include "driver/i2c.h"
 
 char esp32_id[13]; // 定义全局变量
 const char *model = "ESP32_S3_H_V1"; // 定义全局变量
@@ -54,8 +55,66 @@ typedef struct {
 #define TEMPERATURE_EXTREME_MIN -50.0  // °C，极低温度
 #define TEMPERATURE_EXTREME_MAX 100.0  // °C，极高温度
 #define SALINITY_EXTREME_MAX 50.0      // dS/m，过高盐分
+#define LIGHT_EXTREME_MAX 120000.0     // lux，超高光照阈值
 // 全局滑动窗口实例
 static sensor_sliding_window_t sliding_windows = {0};
+
+// BH1750FVI (I2C) - 无第三方依赖最小实现
+#define BH1750_I2C_PORT            I2C_NUM_0
+#define BH1750_ADDR                0x23
+#define BH1750_CMD_POWER_ON        0x01
+#define BH1750_CMD_RESET           0x07
+#define BH1750_CMD_CONT_H_RES      0x10
+
+static bool s_bh1750_ready = false;
+static float s_last_light_lux = 0.0f;
+
+static esp_err_t bh1750_init_once(void)
+{
+    uint8_t cmd = BH1750_CMD_POWER_ON;
+    esp_err_t err = i2c_master_write_to_device(BH1750_I2C_PORT, BH1750_ADDR, &cmd, 1, pdMS_TO_TICKS(100));
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    cmd = BH1750_CMD_RESET;
+    err = i2c_master_write_to_device(BH1750_I2C_PORT, BH1750_ADDR, &cmd, 1, pdMS_TO_TICKS(100));
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    cmd = BH1750_CMD_CONT_H_RES;
+    err = i2c_master_write_to_device(BH1750_I2C_PORT, BH1750_ADDR, &cmd, 1, pdMS_TO_TICKS(100));
+    if (err == ESP_OK) {
+        s_bh1750_ready = true;
+    }
+    return err;
+}
+
+static esp_err_t bh1750_read_lux(float *lux)
+{
+    if (!lux) {
+        return ESP_ERR_INVALID_ARG;
+    }
+
+    if (!s_bh1750_ready) {
+        esp_err_t init_err = bh1750_init_once();
+        if (init_err != ESP_OK) {
+            return init_err;
+        }
+        vTaskDelay(pdMS_TO_TICKS(180));
+    }
+
+    uint8_t raw[2] = {0};
+    esp_err_t err = i2c_master_read_from_device(BH1750_I2C_PORT, BH1750_ADDR, raw, 2, pdMS_TO_TICKS(100));
+    if (err != ESP_OK) {
+        return err;
+    }
+
+    uint16_t raw_value = ((uint16_t)raw[0] << 8) | raw[1];
+    *lux = ((float)raw_value) / 1.2f;
+    return ESP_OK;
+}
 
 // 比较函数用于排序
 static int compare_float(const void *a, const void *b) {
@@ -72,12 +131,13 @@ static bool is_extreme_value(sensor_data_t *data) {
         data->moisture < MOISTURE_EXTREME_MIN || data->moisture > MOISTURE_EXTREME_MAX ||
         data->ph < PH_EXTREME_MIN || data->ph > PH_EXTREME_MAX ||
         data->temperature < TEMPERATURE_EXTREME_MIN || data->temperature > TEMPERATURE_EXTREME_MAX ||
-        data->salinity < 0.0 || data->salinity > SALINITY_EXTREME_MAX) {
+        data->salinity < 0.0 || data->salinity > SALINITY_EXTREME_MAX ||
+        data->light < 0.0 || data->light > LIGHT_EXTREME_MAX) {
         
         ESP_LOGW(TAG, "Extreme value detected:");
-        ESP_LOGW(TAG, "N: %.1f, P: %.1f, K: %.1f, Moisture: %.1f, pH: %.1f, Temp: %.1f, Salinity: %.1f",
+        ESP_LOGW(TAG, "N: %.1f, P: %.1f, K: %.1f, Moisture: %.1f, pH: %.1f, Temp: %.1f, Salinity: %.1f, Light: %.1f",
                  data->nitrogen, data->phosphorus, data->potassium, 
-                 data->moisture, data->ph, data->temperature, data->salinity);
+                 data->moisture, data->ph, data->temperature, data->salinity, data->light);
         return true;
     }
     return false;
@@ -87,9 +147,9 @@ static void add_to_sliding_window(sensor_data_t *new_data) {
     // 如果是极端值，则不添加到窗口中
     if (is_extreme_value(new_data)) {
         ESP_LOGW(TAG, "Extreme value detected, skipping filter update");
-        ESP_LOGW(TAG, "N: %.1f, P: %.1f, K: %.1f, Moisture: %.1f, pH: %.1f, Temp: %.1f, Salinity: %.1f",
+        ESP_LOGW(TAG, "N: %.1f, P: %.1f, K: %.1f, Moisture: %.1f, pH: %.1f, Temp: %.1f, Salinity: %.1f, Light: %.1f",
                  new_data->nitrogen, new_data->phosphorus, new_data->potassium, 
-                 new_data->moisture, new_data->ph, new_data->temperature, new_data->salinity);
+                 new_data->moisture, new_data->ph, new_data->temperature, new_data->salinity, new_data->light);
         return;
     }
 
@@ -144,6 +204,7 @@ static sensor_data_t apply_median_filter(sensor_data_t *new_data) {
     float phosphorus_values[SLIDING_WINDOW_SIZE];
     float potassium_values[SLIDING_WINDOW_SIZE];
     float salinity_values[SLIDING_WINDOW_SIZE];  // 添加盐分数组
+    float light_values[SLIDING_WINDOW_SIZE];
     
     int valid_count = sliding_windows.count;
     for (int i = 0; i < valid_count; i++) {
@@ -155,6 +216,7 @@ static sensor_data_t apply_median_filter(sensor_data_t *new_data) {
         phosphorus_values[i] = sliding_windows.data_window[i].phosphorus;
         potassium_values[i] = sliding_windows.data_window[i].potassium;
         salinity_values[i] = sliding_windows.data_window[i].salinity;  // 添加盐分值
+        light_values[i] = sliding_windows.data_window[i].light;
     }
     
     // 计算各参数的中位数
@@ -167,6 +229,7 @@ static sensor_data_t apply_median_filter(sensor_data_t *new_data) {
     filtered_data.phosphorus = calculate_median(phosphorus_values, valid_count);
     filtered_data.potassium = calculate_median(potassium_values, valid_count);
     filtered_data.salinity = calculate_median(salinity_values, valid_count);  // 添加盐分中位数计算
+    filtered_data.light = calculate_median(light_values, valid_count);
     
     ESP_LOGI(TAG, "Filtered data - N: %.1f, P: %.1f, K: %.1f, Salinity: %.1f", 
              filtered_data.nitrogen, filtered_data.phosphorus, filtered_data.potassium, filtered_data.salinity);
@@ -267,6 +330,7 @@ static char* sensor_data_to_json(sensor_data_t *sensor_data)
     cJSON_AddNumberToObject(root, "phosphorus", sensor_data->phosphorus);
     cJSON_AddNumberToObject(root, "potassium", sensor_data->potassium);
     cJSON_AddNumberToObject(root, "salinity", sensor_data->salinity);
+    cJSON_AddNumberToObject(root, "light", sensor_data->light);
 
     char *json_string = cJSON_PrintUnformatted(root);
     cJSON_Delete(root);
@@ -403,6 +467,12 @@ void echo_task(void *arg)
         if (len > 0) {
             log_uart1_bytes("UART1 RX", data, len);
         }
+
+        float light_lux = s_last_light_lux;
+        if (bh1750_read_lux(&light_lux) == ESP_OK) {
+            s_last_light_lux = light_lux;
+        }
+
         if (len>=19&&data[0]==0x01&&data[1]==0x03&&data[2]==0x10) {  // 修改长度检查以适应新增的盐分数据
             data[len] = '\0';
             uint16_t moisture_raw = (data[3] << 8) | data[4];     // 含水率原始值
@@ -422,7 +492,8 @@ void echo_task(void *arg)
                 .nitrogen = nitrogen_raw,
                 .phosphorus = phosphorus_raw,
                 .potassium = potassium_raw,
-                .salinity = convert_salinity(salinity_raw)  // 添加盐分转换
+                .salinity = convert_salinity(salinity_raw),  // 添加盐分转换
+                .light = light_lux
             };
             
             sensor_data_t filtered_sensor_data = apply_median_filter(&sensor_data);
@@ -437,6 +508,7 @@ void echo_task(void *arg)
             printf("磷含量: %.1f mg/kg\n", filtered_sensor_data.phosphorus);
             printf("钾含量: %.1f mg/kg\n", filtered_sensor_data.potassium);
              printf("盐分: %.1f dS/m\n", filtered_sensor_data.salinity);  // 添加盐分显示
+            printf("光照: %.1f lx\n", filtered_sensor_data.light);
             printf("==================\n");
             // 在 echo_task 函数中，当传感器数据更新时调用 trigger_sensor_callbacks
             // 找到数据处理完成的部分，添加回调触发：

@@ -133,8 +133,8 @@ void setup_scr_sitting_scr(lv_ui *ui)
     lv_style_set_bg_opa(&style_sitting_scr_menu_1_extra_main_title_main_default, 0);
     lv_style_set_pad_hor(&style_sitting_scr_menu_1_extra_main_title_main_default, 5);
     lv_style_set_pad_ver(&style_sitting_scr_menu_1_extra_main_title_main_default, 5);
-    lv_menu_t * sitting_scr_menu_1_menu= (lv_menu_t *)ui->sitting_scr_menu_1;
-    lv_obj_t * sitting_scr_menu_1_title = sitting_scr_menu_1_menu->sidebar_header_title;
+    // lv_menu_t * sitting_scr_menu_1_menu= (lv_menu_t *)ui->sitting_scr_menu_1;
+    lv_obj_t * sitting_scr_menu_1_title = lv_menu_get_sidebar_header(ui->sitting_scr_menu_1);
     lv_obj_set_size(sitting_scr_menu_1_title, LV_PCT(100), LV_SIZE_CONTENT);
     lv_obj_add_style(lv_menu_get_sidebar_header(ui->sitting_scr_menu_1), &style_sitting_scr_menu_1_extra_main_title_main_default, LV_PART_MAIN|LV_STATE_DEFAULT);
 
@@ -284,7 +284,7 @@ void setup_scr_sitting_scr(lv_ui *ui)
     lv_qrcode_set_size(ui->sitting_scr_qrcode_1, 133);
     lv_qrcode_set_dark_color(ui->sitting_scr_qrcode_1, lv_color_hex(0x2C3224));
     lv_qrcode_set_light_color(ui->sitting_scr_qrcode_1, lv_color_hex(0xffffff));
-    const char * sitting_scr_qrcode_1_data = "{\"ver\":\"v1\",\"name\":\"BLE_PROV_DA\",\"pop\":\"abcd1234\",\"transport\":\"ble\"}";
+    const char * sitting_scr_qrcode_1_data = "{\"ver\":\"v1\",\"name\":\"TEMP_000000\",\"pop\":\"abcd1234\",\"transport\":\"ble\"}";
     lv_qrcode_update(ui->sitting_scr_qrcode_1, sitting_scr_qrcode_1_data, 84);
 
     //Write codes sitting_scr_wifi_Incorrect_password
