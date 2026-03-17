@@ -22,6 +22,42 @@
 
 static volatile uint32_t s_lvgl_task_delay_ms = 10;
 
+// 继电器控制引脚映射
+#define RELAY_PUMP_GPIO      GPIO_NUM_15
+#define RELAY_LIGHT_GPIO     GPIO_NUM_16
+#define RELAY_ACTIVE_LEVEL   0
+#define RELAY_INACTIVE_LEVEL 1
+
+static esp_err_t relay_init(void)
+{
+    gpio_config_t io_conf = {
+        .pin_bit_mask = (1ULL << RELAY_PUMP_GPIO) | (1ULL << RELAY_LIGHT_GPIO),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+
+    ESP_ERROR_CHECK(gpio_config(&io_conf));
+
+    // 默认关闭，避免上电误动作。
+    gpio_set_level(RELAY_PUMP_GPIO, RELAY_INACTIVE_LEVEL);
+    gpio_set_level(RELAY_LIGHT_GPIO, RELAY_INACTIVE_LEVEL);
+
+    printf("Relay initialized: pump=GPIO15, light=GPIO16, active_level=%d\n", RELAY_ACTIVE_LEVEL);
+    return ESP_OK;
+}
+
+void relay_set_pump(bool on)
+{
+    gpio_set_level(RELAY_PUMP_GPIO, on ? RELAY_ACTIVE_LEVEL : RELAY_INACTIVE_LEVEL);
+}
+
+void relay_set_light(bool on)
+{
+    gpio_set_level(RELAY_LIGHT_GPIO, on ? RELAY_ACTIVE_LEVEL : RELAY_INACTIVE_LEVEL);
+}
+
 void set_lvgl_task_delay_ms(uint32_t delay_ms)
 {
     if (delay_ms < 5) {
@@ -291,6 +327,13 @@ void app_main(void)
         printf("Failed to initialize system components: %d\n", err);
         return;
     }
+
+    err = relay_init();
+    if (err != ESP_OK) {
+        printf("Failed to initialize relay: %d\n", err);
+        return;
+    }
+
     get_esp32_id(esp32_id, sizeof(esp32_id));
     esp_log_level_set("lcd_panel.io.i2c", ESP_LOG_NONE); // 只显示警告及以上
     esp_log_level_set("FT6x36", ESP_LOG_NONE);           // 只显示警告及以上

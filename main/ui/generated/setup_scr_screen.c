@@ -578,6 +578,52 @@ void setup_scr_screen(lv_ui *ui)
     lv_obj_set_style_pad_left(ui->screen_wifi_on, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_shadow_width(ui->screen_wifi_on, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
 
+    //Write codes screen_pump_k
+    ui->screen_pump_k = lv_button_create(ui->screen);
+    lv_obj_set_pos(ui->screen_pump_k, 155, 54);
+    lv_obj_set_size(ui->screen_pump_k, 62, 24);
+    ui->screen_pump_k_label = lv_label_create(ui->screen_pump_k);
+    lv_label_set_text(ui->screen_pump_k_label, "水泵");
+    lv_label_set_long_mode(ui->screen_pump_k_label, LV_LABEL_LONG_WRAP);
+    lv_obj_align(ui->screen_pump_k_label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_pad_all(ui->screen_pump_k, 0, LV_STATE_DEFAULT);
+    lv_obj_set_width(ui->screen_pump_k_label, LV_PCT(100));
+
+    //Write style for screen_pump_k, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
+    lv_obj_set_style_bg_opa(ui->screen_pump_k, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui->screen_pump_k, lv_color_hex(0x2195f6), LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_grad_dir(ui->screen_pump_k, LV_GRAD_DIR_NONE, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui->screen_pump_k, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(ui->screen_pump_k, 5, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(ui->screen_pump_k, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui->screen_pump_k, lv_color_hex(0xffffff), LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui->screen_pump_k, &lv_font_montserratMedium_16, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui->screen_pump_k, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_align(ui->screen_pump_k, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN|LV_STATE_DEFAULT);
+
+    //Write codes screen_light_k
+    ui->screen_light_k = lv_button_create(ui->screen);
+    lv_obj_set_pos(ui->screen_light_k, 155, 105);
+    lv_obj_set_size(ui->screen_light_k, 62, 24);
+    ui->screen_light_k_label = lv_label_create(ui->screen_light_k);
+    lv_label_set_text(ui->screen_light_k_label, "补光灯");
+    lv_label_set_long_mode(ui->screen_light_k_label, LV_LABEL_LONG_WRAP);
+    lv_obj_align(ui->screen_light_k_label, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_pad_all(ui->screen_light_k, 0, LV_STATE_DEFAULT);
+    lv_obj_set_width(ui->screen_light_k_label, LV_PCT(100));
+
+    //Write style for screen_light_k, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
+    lv_obj_set_style_bg_opa(ui->screen_light_k, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_color(ui->screen_light_k, lv_color_hex(0x2195f6), LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_bg_grad_dir(ui->screen_light_k, LV_GRAD_DIR_NONE, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_border_width(ui->screen_light_k, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_radius(ui->screen_light_k, 5, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_shadow_width(ui->screen_light_k, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_color(ui->screen_light_k, lv_color_hex(0xffffff), LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_font(ui->screen_light_k, &lv_font_montserratMedium_16, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_opa(ui->screen_light_k, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
+    lv_obj_set_style_text_align(ui->screen_light_k, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN|LV_STATE_DEFAULT);
+
     //The custom code of screen.
 
 
