@@ -37,7 +37,7 @@ void setup_scr_more_scr(lv_ui *ui)
     lv_tabview_set_tab_bar_size(ui->more_scr_more_ss, 40);
     ui->more_scr_more_ss_tab_1 = lv_tabview_add_tab(ui->more_scr_more_ss, "AI建议");
     ui->more_scr_more_ss_tab_2 = lv_tabview_add_tab(ui->more_scr_more_ss, "图表");
-    ui->more_scr_more_ss_tab_3 = lv_tabview_add_tab(ui->more_scr_more_ss, "tab3");
+    ui->more_scr_more_ss_tab_3 = lv_tabview_add_tab(ui->more_scr_more_ss, "历史记录");
 
     //Write style for more_scr_more_ss, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
     lv_obj_set_style_bg_opa(ui->more_scr_more_ss, 255, LV_PART_MAIN|LV_STATE_DEFAULT);
@@ -103,7 +103,7 @@ void setup_scr_more_scr(lv_ui *ui)
 
     //Write codes AI建议
     lv_obj_t * more_scr_more_ss_tab_1_label = lv_label_create(ui->more_scr_more_ss_tab_1);
-    lv_label_set_text(more_scr_more_ss_tab_1_label, "植物状态正常，建议多浇水，多晒太阳");
+    lv_label_set_text(more_scr_more_ss_tab_1_label, "");
 
     //Write codes 图表
     lv_obj_t * more_scr_more_ss_tab_2_label = lv_label_create(ui->more_scr_more_ss_tab_2);
@@ -227,9 +227,9 @@ void setup_scr_more_scr(lv_ui *ui)
     lv_obj_set_style_pad_left(ui->more_scr_label_3, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
     lv_obj_set_style_shadow_width(ui->more_scr_label_3, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
 
-    //Write codes tab3
+    //Write codes 历史记录
     lv_obj_t * more_scr_more_ss_tab_3_label = lv_label_create(ui->more_scr_more_ss_tab_3);
-    lv_label_set_text(more_scr_more_ss_tab_3_label, "con3");
+    lv_label_set_text(more_scr_more_ss_tab_3_label, "2026/3/23:\n光照低");
 
     //Write codes more_scr_btn_2
     ui->more_scr_btn_2 = lv_button_create(ui->more_scr);

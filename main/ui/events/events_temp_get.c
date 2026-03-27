@@ -8,6 +8,23 @@
 
 static lv_timer_t *s_sensor_timer = NULL;
 
+static const char *get_light_level_text(float lux)
+{
+    if (lux < 50.0f) {
+        return "极暗";
+    }
+    if (lux < 500.0f) {
+        return "偏暗";
+    }
+    if (lux < 5000.0f) {
+        return "适宜";
+    }
+    if (lux < 20000.0f) {
+        return "偏强";
+    }
+    return "过强";
+}
+
 static void update_npk_chart(lv_ui *ui, const sensor_data_t *sensor_data)
 {
     if (!ui || !sensor_data || !ui->more_scr_chart_1 || !ui->more_scr_chart_1_0) {
@@ -164,7 +181,7 @@ void update_sensor_display(lv_ui *ui)
 
             // 更新光照显示 (screen_label_1)
             if (ui->screen_label_1) {
-                snprintf(buffer, sizeof(buffer), "光照: %.1f lx", sensor_data.light);
+                snprintf(buffer, sizeof(buffer), "光照: %s", get_light_level_text(sensor_data.light));
                 lv_label_set_text(ui->screen_label_1, buffer);
                 printf("Updated screen_label_1 to %s\n", buffer);
             }

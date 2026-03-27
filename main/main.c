@@ -25,8 +25,8 @@ static volatile uint32_t s_lvgl_task_delay_ms = 10;
 // 继电器控制引脚映射
 #define RELAY_PUMP_GPIO      GPIO_NUM_15
 #define RELAY_LIGHT_GPIO     GPIO_NUM_16
-#define RELAY_ACTIVE_LEVEL   0
-#define RELAY_INACTIVE_LEVEL 1
+#define RELAY_ACTIVE_LEVEL   1
+#define RELAY_INACTIVE_LEVEL 0
 
 static esp_err_t relay_init(void)
 {

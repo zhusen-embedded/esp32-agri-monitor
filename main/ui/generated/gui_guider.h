@@ -56,6 +56,7 @@ typedef struct
 	lv_obj_t *screen_pump_k_label;
 	lv_obj_t *screen_light_k;
 	lv_obj_t *screen_light_k_label;
+	lv_obj_t *screen_label_3;
 	lv_obj_t *sitting_scr;
 	bool sitting_scr_del;
 	lv_obj_t *sitting_scr_menu_1;
@@ -149,9 +150,9 @@ LV_IMAGE_DECLARE(_waring_RGB565A8_20x20);
 LV_FONT_DECLARE(lv_font_YouSheYuFeiTeJianKangTi_2_16)
 LV_FONT_DECLARE(lv_font_YouSheYuFeiTeJianKangTi_2_18)
 LV_FONT_DECLARE(lv_font_icon_zero_two_18)
-LV_FONT_DECLARE(lv_font_montserratMedium_16)
 LV_FONT_DECLARE(lv_font_YouSheYuFeiTeJianKangTi_2_12)
 LV_FONT_DECLARE(lv_font_YouSheYuFeiTeJianKangTi_2_20)
+LV_FONT_DECLARE(lv_font_montserratMedium_16)
 LV_FONT_DECLARE(lv_font_HYPixel11pxU_2_18)
 
 

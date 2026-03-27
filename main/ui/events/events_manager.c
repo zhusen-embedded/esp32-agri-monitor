@@ -26,9 +26,15 @@ static lv_obj_t *s_bound_cb_5 = NULL;
 static lv_obj_t *s_bound_btn_reset = NULL;
 static lv_obj_t *s_bound_btn_reprovision = NULL;
 static lv_obj_t *s_bound_sw_power = NULL;
+static lv_obj_t *s_bound_btn_pump = NULL;
+static lv_obj_t *s_bound_btn_light = NULL;
+static bool s_pump_on = false;
+static bool s_light_on = false;
 
 static void wifi_menu_event_handler(lv_event_t *e);
 extern void set_lvgl_task_delay_ms(uint32_t delay_ms);
+extern void relay_set_pump(bool on);
+extern void relay_set_light(bool on);
 
 typedef enum {
     HOME_ITEM_TEMPERATURE = 0,
@@ -248,6 +254,64 @@ static void reprovision_event_handler(lv_event_t *e)
     esp_restart();
 }
 
+static void update_relay_buttons_ui(void)
+{
+    if (!s_ui_ctx) {
+        return;
+    }
+
+    if (s_ui_ctx->screen_pump_k_label) {
+        lv_label_set_text(s_ui_ctx->screen_pump_k_label, s_pump_on ? "水泵:开" : "水泵:关");
+    }
+
+    if (s_ui_ctx->screen_light_k_label) {
+        lv_label_set_text(s_ui_ctx->screen_light_k_label, s_light_on ? "补光:开" : "补光:关");
+    }
+}
+
+static void pump_button_event_handler(lv_event_t *e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED) {
+        return;
+    }
+
+    s_pump_on = !s_pump_on;
+    relay_set_pump(s_pump_on);
+    update_relay_buttons_ui();
+    printf("Pump relay: %s\n", s_pump_on ? "ON" : "OFF");
+}
+
+static void light_button_event_handler(lv_event_t *e)
+{
+    if (lv_event_get_code(e) != LV_EVENT_CLICKED) {
+        return;
+    }
+
+    s_light_on = !s_light_on;
+    relay_set_light(s_light_on);
+    update_relay_buttons_ui();
+    printf("Light relay: %s\n", s_light_on ? "ON" : "OFF");
+}
+
+static void bind_screen_relay_events_if_needed(void)
+{
+    if (!s_ui_ctx) {
+        return;
+    }
+
+    if (s_ui_ctx->screen_pump_k && s_bound_btn_pump != s_ui_ctx->screen_pump_k) {
+        lv_obj_add_event_cb(s_ui_ctx->screen_pump_k, pump_button_event_handler, LV_EVENT_CLICKED, NULL);
+        s_bound_btn_pump = s_ui_ctx->screen_pump_k;
+    }
+
+    if (s_ui_ctx->screen_light_k && s_bound_btn_light != s_ui_ctx->screen_light_k) {
+        lv_obj_add_event_cb(s_ui_ctx->screen_light_k, light_button_event_handler, LV_EVENT_CLICKED, NULL);
+        s_bound_btn_light = s_ui_ctx->screen_light_k;
+    }
+
+    update_relay_buttons_ui();
+}
+
 static void init_home_item_settings(lv_ui *ui)
 {
     if (!ui) {
@@ -359,6 +423,7 @@ static void bind_sitting_screen_events_if_needed(void)
 static void wifi_status_timer_cb(lv_timer_t *timer)
 {
     (void)timer;
+    bind_screen_relay_events_if_needed();
     bind_sitting_screen_events_if_needed();
     update_wifi_icon();
 }
@@ -450,6 +515,7 @@ void init_custom_events(lv_ui *ui)
     printf("Initializing custom events...\n");
     s_ui_ctx = ui;
     start_sensor_data_updates(ui);
+    bind_screen_relay_events_if_needed();
     bind_sitting_screen_events_if_needed();
     update_provisioning_qrcode();
 
