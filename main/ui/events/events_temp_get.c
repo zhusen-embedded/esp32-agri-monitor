@@ -4,7 +4,10 @@
 #include "../generated/gui_guider.h"
 #include "lvgl.h"
 #include <stdio.h>
+#include "esp_log.h"
 #include "../uart_echo_wifi_ble/uart_echo_wifi_ble.h"
+
+static const char *TAG_UI = "UI";
 
 static lv_timer_t *s_sensor_timer = NULL;
 
@@ -54,7 +57,7 @@ static void update_npk_chart(lv_ui *ui, const sensor_data_t *sensor_data)
     lv_chart_set_value_by_id(ui->more_scr_chart_1, ui->more_scr_chart_1_0, 2, k_value);
     lv_chart_refresh(ui->more_scr_chart_1);
 
-    printf("Updated more_scr_chart_1: N=%d, P=%d, K=%d\n", n_value, p_value, k_value);
+    ESP_LOGD(TAG_UI, "Updated more_scr_chart_1: N=%d, P=%d, K=%d", n_value, p_value, k_value);
 }
 
 // 更新传感器数据显示的函数
@@ -72,7 +75,7 @@ void update_sensor_display(lv_ui *ui)
     
     if (get_sensor_data(&sensor_data, &has_new_data)) {
         if (has_new_data) {
-            printf("Updating sensor display with new data...\n");
+            ESP_LOGD(TAG_UI, "Updating sensor display with new data...");
 
             bool npk_visible = (ui->screen_jia_bar != NULL) &&
                                !lv_obj_has_flag(ui->screen_jia_bar, LV_OBJ_FLAG_HIDDEN);
@@ -98,7 +101,7 @@ void update_sensor_display(lv_ui *ui)
                     lv_obj_clear_flag(ui->screen_warring, LV_OBJ_FLAG_HIDDEN);
                 }
                 lv_bar_set_value(ui->screen_jia_bar, potassium_value, LV_ANIM_ON);
-                printf("Updated screen_jia_bar to %d\n", potassium_value);
+                ESP_LOGD(TAG_UI, "Updated screen_jia_bar to %d", potassium_value);
             }
             
             // 更新氮显示 (screen_bar_1)
@@ -120,7 +123,7 @@ void update_sensor_display(lv_ui *ui)
                     lv_obj_clear_flag(ui->screen_waring_3, LV_OBJ_FLAG_HIDDEN);
                 }
                 lv_bar_set_value(ui->screen_bar_1, nitrogen_value, LV_ANIM_ON);
-                printf("Updated screen_bar_1 to %d\n", nitrogen_value);
+                ESP_LOGD(TAG_UI, "Updated screen_bar_1 to %d", nitrogen_value);
             }
             
             // 更新磷显示 (screen_ling_bar)
@@ -142,13 +145,11 @@ void update_sensor_display(lv_ui *ui)
                     lv_obj_clear_flag(ui->screen_waring_2, LV_OBJ_FLAG_HIDDEN);
                 }
                 lv_bar_set_value(ui->screen_ling_bar, phosphorus_value, LV_ANIM_ON);
-                printf("Updated screen_ling_bar to %d\n", phosphorus_value);
+                ESP_LOGD(TAG_UI, "Updated screen_ling_bar to %d", phosphorus_value);
             }
             
             // 更新湿度显示 (screen_water_temp)
             if (ui->screen_water_temp) {
-                snprintf(buffer, sizeof(buffer), "湿度: %.1f%%", sensor_data.moisture);
-                lv_label_set_text(ui->screen_water_temp, buffer);
                 if (!humidity_visible) {
                     lv_obj_add_flag(ui->screen_danger_4, LV_OBJ_FLAG_HIDDEN);
                     lv_obj_add_flag(ui->screen_waring_4, LV_OBJ_FLAG_HIDDEN);
@@ -162,64 +163,65 @@ void update_sensor_display(lv_ui *ui)
                     lv_obj_clear_flag(ui->screen_danger_4, LV_OBJ_FLAG_HIDDEN);
                     lv_obj_clear_flag(ui->screen_waring_4, LV_OBJ_FLAG_HIDDEN);
                 }
-                printf("Updated screen_water_temp to %s\n", buffer);
+                snprintf(buffer, sizeof(buffer), "湿度: %.1f%%", sensor_data.moisture);
+                lv_label_set_text(ui->screen_water_temp, buffer);
+                ESP_LOGD(TAG_UI, "Updated screen_water_temp to %s", buffer);
             }
             
             // 更新PH值显示 (screen_ph_temp)
             if (ui->screen_ph_temp) {
                 snprintf(buffer, sizeof(buffer), "PH: %.1f", sensor_data.ph);
                 lv_label_set_text(ui->screen_ph_temp, buffer);
-                printf("Updated screen_ph_temp to %s\n", buffer);
+                ESP_LOGD(TAG_UI, "Updated screen_ph_temp to %s", buffer);
             }
             
             // 更新温度显示 (screen_label_2)
             if (ui->screen_label_2) {
                 snprintf(buffer, sizeof(buffer), "温度: %.1f度", sensor_data.temperature);
                 lv_label_set_text(ui->screen_label_2, buffer);
-                printf("Updated screen_label_2 to %s\n", buffer);
+                ESP_LOGD(TAG_UI, "Updated screen_label_2 to %s", buffer);
             }
 
             // 更新光照显示 (screen_label_1)
             if (ui->screen_label_1) {
                 snprintf(buffer, sizeof(buffer), "光照: %s", get_light_level_text(sensor_data.light));
                 lv_label_set_text(ui->screen_label_1, buffer);
-                printf("Updated screen_label_1 to %s\n", buffer);
+                ESP_LOGD(TAG_UI, "Updated screen_label_1 to %s", buffer);
             }
 
             // 更新 more_scr 的 N/P/K 图表
             update_npk_chart(ui, &sensor_data);
-            
-            printf("Sensor display updated successfully\n");
+            ESP_LOGD(TAG_UI, "Sensor display updated successfully");
         } else {
-            printf("No new sensor data available\n");
+            ESP_LOGD(TAG_UI, "No new sensor data available");
         }
     } else {
-        printf("Failed to get sensor data\n");
+        ESP_LOGD(TAG_UI, "Failed to get sensor data");
     }
 }
 
 // 定时器回调函数 - 定期检查并更新传感器数据
 static void sensor_update_timer_cb(lv_timer_t *timer)
 {
-    printf("Sensor update timer callback triggered\n");
+    ESP_LOGD(TAG_UI, "Sensor update timer callback triggered");
     lv_ui *ui = (lv_ui *)lv_timer_get_user_data(timer);
     if (ui) {
         update_sensor_display(ui);
     } else {
-        printf("UI pointer is NULL in timer callback\n");
+        ESP_LOGD(TAG_UI, "UI pointer is NULL in timer callback");
     }
 }
 
 // 启动传感器数据更新定时器
 void start_sensor_data_updates(lv_ui *ui)
 {
-    printf("Starting sensor data updates with 5-second interval...\n");
+    ESP_LOGI(TAG_UI, "Starting sensor data updates with 5-second interval...");
 
     if (s_sensor_timer == NULL) {
         // 创建一个定时器，每5000ms检查并更新传感器数据
         s_sensor_timer = lv_timer_create(sensor_update_timer_cb, 5000, ui);
         if (s_sensor_timer == NULL) {
-            printf("Failed to create sensor update timer\n");
+            ESP_LOGE(TAG_UI, "Failed to create sensor update timer");
             return;
         }
     } else {
@@ -227,7 +229,7 @@ void start_sensor_data_updates(lv_ui *ui)
         lv_timer_set_period(s_sensor_timer, 5000);
     }
     
-    printf("Sensor data update timer started successfully with 5-second interval\n");
+    ESP_LOGD(TAG_UI, "Sensor data update timer started successfully with 5-second interval");
 }
 
 void set_sensor_update_interval_ms(uint32_t interval_ms)
@@ -240,13 +242,13 @@ void set_sensor_update_interval_ms(uint32_t interval_ms)
         interval_ms = 500;
     }
     lv_timer_set_period(s_sensor_timer, interval_ms);
-    printf("Sensor UI update interval set to %lu ms\n", (unsigned long)interval_ms);
+    ESP_LOGI(TAG_UI, "Sensor UI update interval set to %lu ms", (unsigned long)interval_ms);
 }
 
 // 手动触发一次传感器数据显示更新
 void force_sensor_display_update(lv_ui *ui)
 {
-    printf("Forcing sensor display update...\n");
+    ESP_LOGD(TAG_UI, "Forcing sensor display update...");
     update_sensor_display(ui);
 }
 

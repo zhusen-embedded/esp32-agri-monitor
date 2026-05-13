@@ -8,6 +8,7 @@
 #include "esp_netif.h"
 #include "esp_wifi.h"
 #include "nvs_flash.h"
+#include "freertos/event_groups.h"
 #include "nimble/nimble_port.h"
 #include "nimble/nimble_port_freertos.h"
 #include "host/ble_hs.h"
@@ -50,12 +51,17 @@ static bool s_adv_active = false;
 static bool s_notify_enabled = false;
 static bool s_wifi_event_handlers_registered = false;
 static bool s_config_in_progress = false;
+static bool s_boot_connect_in_progress = false;
 static uint8_t s_config_seq = 0;
 static uint8_t s_scan_seq = 0;
 static uint8_t s_mac[6] = {0};
 static uint8_t s_own_addr_type = BLE_OWN_ADDR_PUBLIC;
 static uint16_t s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t s_tx_handle = 0;
+static EventGroupHandle_t s_boot_connect_event_group = NULL;
+
+#define BOOT_WIFI_CONNECTED_BIT BIT0
+#define BOOT_WIFI_FAIL_BIT      BIT1
 
 static ble_uuid128_t s_svc_uuid;
 static ble_uuid128_t s_rx_uuid;
@@ -67,6 +73,7 @@ static void ble_host_task(void *param);
 static void ble_start_advertising(void);
 static void notify_packet(uint8_t op, uint8_t seq, const uint8_t *payload, uint16_t len);
 static void handle_rx_command(const uint8_t *data, uint16_t len);
+static void boot_wifi_event_init(void);
 void ble_store_config_init(void);
 
 static void ble_on_reset(int reason)
@@ -301,6 +308,13 @@ static void wifi_notify_config_result(uint8_t status)
     notify_packet(OP_CONFIG_RESULT, s_config_seq, payload, sizeof(payload));
 }
 
+static void boot_wifi_event_init(void)
+{
+    if (s_boot_connect_event_group == NULL) {
+        s_boot_connect_event_group = xEventGroupCreate();
+    }
+}
+
 static void wifi_event_handler(void *arg, esp_event_base_t event_base,
                                int32_t event_id, void *event_data)
 {
@@ -342,7 +356,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
     }
 
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        if (!s_config_in_progress) {
+        if (!s_config_in_progress && !s_boot_connect_in_progress) {
             return;
         }
         wifi_event_sta_disconnected_t *disc = (wifi_event_sta_disconnected_t *)event_data;
@@ -355,15 +369,21 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base,
             }
         }
         s_config_in_progress = false;
+        if (s_boot_connect_in_progress && s_boot_connect_event_group != NULL) {
+            xEventGroupSetBits(s_boot_connect_event_group, BOOT_WIFI_FAIL_BIT);
+        }
         wifi_notify_config_result(status);
         return;
     }
 
     if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
-        if (!s_config_in_progress) {
+        if (!s_config_in_progress && !s_boot_connect_in_progress) {
             return;
         }
         s_config_in_progress = false;
+        if (s_boot_connect_in_progress && s_boot_connect_event_group != NULL) {
+            xEventGroupSetBits(s_boot_connect_event_group, BOOT_WIFI_CONNECTED_BIT);
+        }
         wifi_notify_config_result(STATUS_OK);
         return;
     }
@@ -562,6 +582,76 @@ esp_err_t ble_wifi_force_reprovision(void)
         ble_start_advertising();
     }
     return ESP_OK;
+}
+
+esp_err_t ble_wifi_try_connect_saved(uint32_t timeout_ms)
+{
+    esp_err_t err = ensure_base_inited();
+    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
+        return err;
+    }
+
+    boot_wifi_event_init();
+    if (s_boot_connect_event_group == NULL) {
+        return ESP_ERR_NO_MEM;
+    }
+
+    wifi_config_t wifi_cfg;
+    memset(&wifi_cfg, 0, sizeof(wifi_cfg));
+    err = esp_wifi_get_config(WIFI_IF_STA, &wifi_cfg);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Read saved WiFi config failed: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    if (wifi_cfg.sta.ssid[0] == '\0') {
+        ESP_LOGW(TAG, "No saved WiFi config found");
+        return ESP_ERR_NOT_FOUND;
+    }
+
+    ESP_LOGI(TAG, "Boot WiFi try connect, ssid=%s", (char *)wifi_cfg.sta.ssid);
+
+    xEventGroupClearBits(s_boot_connect_event_group, BOOT_WIFI_CONNECTED_BIT | BOOT_WIFI_FAIL_BIT);
+    s_boot_connect_in_progress = true;
+
+    err = esp_wifi_set_config(WIFI_IF_STA, &wifi_cfg);
+    if (err != ESP_OK) {
+        s_boot_connect_in_progress = false;
+        ESP_LOGW(TAG, "Apply saved WiFi config failed: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    esp_wifi_disconnect();
+    err = esp_wifi_connect();
+    if (err != ESP_OK) {
+        s_boot_connect_in_progress = false;
+        ESP_LOGW(TAG, "Boot WiFi connect start failed: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    EventBits_t bits = xEventGroupWaitBits(
+        s_boot_connect_event_group,
+        BOOT_WIFI_CONNECTED_BIT | BOOT_WIFI_FAIL_BIT,
+        pdTRUE,
+        pdFALSE,
+        pdMS_TO_TICKS(timeout_ms)
+    );
+
+    s_boot_connect_in_progress = false;
+
+    if ((bits & BOOT_WIFI_CONNECTED_BIT) != 0) {
+        ESP_LOGI(TAG, "Boot WiFi connected");
+        return ESP_OK;
+    }
+
+    esp_wifi_disconnect();
+    if ((bits & BOOT_WIFI_FAIL_BIT) != 0) {
+        ESP_LOGW(TAG, "Boot WiFi connect failed, stop retry until next boot");
+        return ESP_FAIL;
+    }
+
+    ESP_LOGW(TAG, "Boot WiFi connect timeout after %lu ms", (unsigned long)timeout_ms);
+    return ESP_ERR_TIMEOUT;
 }
 
 bool ble_wifi_is_client_connected(void)

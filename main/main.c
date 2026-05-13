@@ -345,9 +345,14 @@ void app_main(void)
     }
     printf("Display initialized\n");
     
-    printf("BLE provisioning started\n");
-    ble_wifi_provisioning_start(); // 启动蓝牙自定义配网
-    ble_wifi_force_reprovision(); // 强制重新配网
+    printf("Boot WiFi connecting...\n");
+    err = ble_wifi_try_connect_saved(8000);
+    if (err == ESP_OK) {
+        printf("Boot WiFi connected\n");
+    } else {
+        printf("Boot WiFi connect failed/timeout, start BLE provisioning\n");
+        ble_wifi_provisioning_start(); // 仅在记忆连接失败后启动蓝牙配网
+    }
     // 初始化触摸屏
     err = init_touch();
     if (err != ESP_OK) {

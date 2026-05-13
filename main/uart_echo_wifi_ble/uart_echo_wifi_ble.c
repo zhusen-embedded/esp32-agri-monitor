@@ -5,6 +5,11 @@
 #include "esp_crt_bundle.h"
 #include "driver/i2c.h"
 
+// 控制是否输出详细的 UART 十六进制转储（默认关闭，减少串口噪声）
+#ifndef UART_VERBOSE_LOG
+#define UART_VERBOSE_LOG 0
+#endif
+
 char esp32_id[13]; // 定义全局变量
 const char *model = "ESP32_S3_H_V1"; // 定义全局变量
 
@@ -30,8 +35,12 @@ static void log_uart1_bytes(const char *prefix, const uint8_t *data, int len)
     if (data == NULL || len <= 0) {
         return;
     }
+#if UART_VERBOSE_LOG
     ESP_LOGI(TAG, "%s (len=%d)", prefix, len);
     ESP_LOG_BUFFER_HEXDUMP(TAG, data, len, ESP_LOG_INFO);
+#else
+    ESP_LOGD(TAG, "%s (len=%d)", prefix, len);
+#endif
 }
 
 /*滑动窗口滤波*/
@@ -231,7 +240,7 @@ static sensor_data_t apply_median_filter(sensor_data_t *new_data) {
     filtered_data.salinity = calculate_median(salinity_values, valid_count);  // 添加盐分中位数计算
     filtered_data.light = calculate_median(light_values, valid_count);
     
-    ESP_LOGI(TAG, "Filtered data - N: %.1f, P: %.1f, K: %.1f, Salinity: %.1f", 
+    ESP_LOGD(TAG, "Filtered data - N: %.1f, P: %.1f, K: %.1f, Salinity: %.1f", 
              filtered_data.nitrogen, filtered_data.phosphorus, filtered_data.potassium, filtered_data.salinity);
     
     return filtered_data;
@@ -304,11 +313,11 @@ static bool is_network_ready(void)
     esp_netif_t* netif = esp_netif_get_handle_from_ifkey("WIFI_STA_DEF");
     if (netif && esp_netif_get_ip_info(netif, &ip_info) == ESP_OK) {
         if (ip_info.ip.addr != 0) {
-            ESP_LOGI(TAG, "网络已就绪，IP: " IPSTR, IP2STR(&ip_info.ip));
+            ESP_LOGD(TAG, "网络已就绪，IP: " IPSTR, IP2STR(&ip_info.ip));
             return true;
         }
     }
-    ESP_LOGW(TAG, "网络未就绪");
+    ESP_LOGD(TAG, "网络未就绪");
     return false;
 }
 //wifi事件创建
@@ -498,25 +507,18 @@ void echo_task(void *arg)
             
             sensor_data_t filtered_sensor_data = apply_median_filter(&sensor_data);
             
-            //发送数据结束
-            printf("=== 传感器数据 ===\n");
-            printf("含水率: %.1f%%\n", filtered_sensor_data.moisture);
-            printf("温度值: %.1f°C\n", filtered_sensor_data.temperature);
-            printf("电导率: %.0f us/cm\n", filtered_sensor_data.conductivity);
-            printf("PH值: %.1f\n", filtered_sensor_data.ph);
-            printf("氮含量: %.1f mg/kg\n", filtered_sensor_data.nitrogen);
-            printf("磷含量: %.1f mg/kg\n", filtered_sensor_data.phosphorus);
-            printf("钾含量: %.1f mg/kg\n", filtered_sensor_data.potassium);
-             printf("盐分: %.1f dS/m\n", filtered_sensor_data.salinity);  // 添加盐分显示
-            printf("光照: %.1f lx\n", filtered_sensor_data.light);
-            printf("==================\n");
+            // 仅在调试级别输出简要的传感器摘要，避免高频串口噪声
+            ESP_LOGD(TAG, "Sensor summary: moisture=%.1f%% temp=%.1fC cond=%.0f ph=%.1f N=%.1f P=%.1f K=%.1f Sal=%.1f lx=%.1f",
+                     filtered_sensor_data.moisture, filtered_sensor_data.temperature, filtered_sensor_data.conductivity,
+                     filtered_sensor_data.ph, filtered_sensor_data.nitrogen, filtered_sensor_data.phosphorus,
+                     filtered_sensor_data.potassium, filtered_sensor_data.salinity, filtered_sensor_data.light);
             // 在 echo_task 函数中，当传感器数据更新时调用 trigger_sensor_callbacks
             // 找到数据处理完成的部分，添加回调触发：
             if (data_mutex != NULL) {
                 if (xSemaphoreTake(data_mutex, portMAX_DELAY) == pdTRUE) {
                     latest_sensor_data = filtered_sensor_data;
                     new_data_available = true;
-                    ESP_LOGI("SENSOR", "Sensor data updated and marked as available\n");
+                    ESP_LOGD(TAG, "Sensor data updated and marked as available");
                     xSemaphoreGive(data_mutex);
                 }
             }
