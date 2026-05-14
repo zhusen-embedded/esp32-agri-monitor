@@ -333,7 +333,7 @@ void app_main(void)
         printf("Failed to initialize relay: %d\n", err);
         return;
     }
-
+    
     get_esp32_id(esp32_id, sizeof(esp32_id));
     esp_log_level_set("lcd_panel.io.i2c", ESP_LOG_NONE); // 只显示警告及以上
     esp_log_level_set("FT6x36", ESP_LOG_NONE);           // 只显示警告及以上

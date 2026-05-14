@@ -60,6 +60,9 @@ static uint16_t s_conn_handle = BLE_HS_CONN_HANDLE_NONE;
 static uint16_t s_tx_handle = 0;
 static EventGroupHandle_t s_boot_connect_event_group = NULL;
 
+#define HOTSPOT_SSID_PREFIX   "ESP32_PI_"
+#define HOTSPOT_PASSWORD      "12345678"
+
 #define BOOT_WIFI_CONNECTED_BIT BIT0
 #define BOOT_WIFI_FAIL_BIT      BIT1
 
@@ -74,6 +77,7 @@ static void ble_start_advertising(void);
 static void notify_packet(uint8_t op, uint8_t seq, const uint8_t *payload, uint16_t len);
 static void handle_rx_command(const uint8_t *data, uint16_t len);
 static void boot_wifi_event_init(void);
+static esp_err_t ensure_hotspot_started(void);
 void ble_store_config_init(void);
 
 static void ble_on_reset(int reason)
@@ -682,6 +686,10 @@ static esp_err_t ensure_base_inited(void)
         esp_netif_create_default_wifi_sta();
     }
 
+    if (!esp_netif_get_handle_from_ifkey("WIFI_AP_DEF")) {
+        esp_netif_create_default_wifi_ap();
+    }
+
     wifi_mode_t current_mode;
     err = esp_wifi_get_mode(&current_mode);
     if (err == ESP_ERR_WIFI_NOT_INIT) {
@@ -691,13 +699,60 @@ static esp_err_t ensure_base_inited(void)
         return err;
     }
 
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_start());
+    err = ensure_hotspot_started();
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "Hotspot init failed, continue without abort: %s", esp_err_to_name(err));
+    }
+
+    err = esp_wifi_set_mode(WIFI_MODE_APSTA);
+    if (err != ESP_OK && err != ESP_ERR_WIFI_STATE) {
+        ESP_LOGW(TAG, "Set WIFI_MODE_APSTA failed: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    err = esp_wifi_start();
+    if (err != ESP_OK && err != ESP_ERR_WIFI_STATE) {
+        ESP_LOGW(TAG, "esp_wifi_start failed: %s", esp_err_to_name(err));
+        return err;
+    }
 
     if (!s_wifi_event_handlers_registered) {
         ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &wifi_event_handler, NULL));
         ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, NULL));
         s_wifi_event_handlers_registered = true;
     }
+    return ESP_OK;
+}
+
+static esp_err_t ensure_hotspot_started(void)
+{
+    uint8_t sta_mac[6] = {0};
+    esp_read_mac(sta_mac, ESP_MAC_WIFI_STA);
+
+    char ssid[32] = {0};
+    snprintf(ssid, sizeof(ssid), HOTSPOT_SSID_PREFIX "%02X%02X%02X", sta_mac[3], sta_mac[4], sta_mac[5]);
+
+    wifi_config_t ap_cfg;
+    memset(&ap_cfg, 0, sizeof(ap_cfg));
+    strncpy((char *)ap_cfg.ap.ssid, ssid, sizeof(ap_cfg.ap.ssid));
+    ap_cfg.ap.ssid_len = strlen(ssid);
+    strncpy((char *)ap_cfg.ap.password, HOTSPOT_PASSWORD, sizeof(ap_cfg.ap.password));
+    ap_cfg.ap.channel = 1;
+    ap_cfg.ap.authmode = WIFI_AUTH_WPA2_PSK;
+    ap_cfg.ap.ssid_hidden = 0;
+    ap_cfg.ap.max_connection = 4;
+    ap_cfg.ap.beacon_interval = 100;
+
+    if (HOTSPOT_PASSWORD[0] == '\0') {
+        ap_cfg.ap.authmode = WIFI_AUTH_OPEN;
+    }
+
+    esp_err_t err = esp_wifi_set_config(WIFI_IF_AP, &ap_cfg);
+    if (err != ESP_OK && err != ESP_ERR_WIFI_STATE) {
+        ESP_LOGW(TAG, "Set AP config failed: %s", esp_err_to_name(err));
+        return err;
+    }
+
+    ESP_LOGI(TAG, "Hotspot ready: ssid=%s password=%s", ssid, HOTSPOT_PASSWORD);
     return ESP_OK;
 }
