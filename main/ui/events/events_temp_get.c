@@ -4,12 +4,73 @@
 #include "../generated/gui_guider.h"
 #include "lvgl.h"
 #include <stdio.h>
+#include <string.h>
 #include "esp_log.h"
+#include "cJSON.h"
 #include "../uart_echo_wifi_ble/uart_echo_wifi_ble.h"
+#include "../uart_echo_wifi_ble/usb_pi_link.h"
 
 static const char *TAG_UI = "UI";
 
 static lv_timer_t *s_sensor_timer = NULL;
+static lv_timer_t *s_ai_timer = NULL;
+static lv_obj_t *s_ai_result_label = NULL;
+
+static void update_ai_advice_display(lv_ui *ui)
+{
+    if (!ui || !ui->more_scr_more_ss_tab_1) {
+        return;
+    }
+
+    if (s_ai_result_label == NULL) {
+        s_ai_result_label = lv_label_create(ui->more_scr_more_ss_tab_1);
+        lv_obj_set_pos(s_ai_result_label, 12, 12);
+        lv_obj_set_size(s_ai_result_label, 290, 190);
+        lv_label_set_long_mode(s_ai_result_label, LV_LABEL_LONG_WRAP);
+        lv_obj_set_style_text_align(s_ai_result_label, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_text_color(s_ai_result_label, lv_color_hex(0x1f2937), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_text_font(s_ai_result_label, &lv_font_YouSheYuFeiTeJianKangTi_2_16, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_pad_all(s_ai_result_label, 4, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_opa(s_ai_result_label, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    }
+
+    char raw[256];
+    char display[320];
+    raw[0] = '\0';
+    display[0] = '\0';
+
+    if (!usb_pi_link_get_latest(raw, sizeof(raw))) {
+        snprintf(display, sizeof(display), "等待树莓派推理结果...\n\n示例：\n{\"type\":\"infer\",\"label\":\"tomato\",\"conf\":0.93}");
+        lv_label_set_text(s_ai_result_label, display);
+        return;
+    }
+
+    cJSON *root = cJSON_Parse(raw);
+    if (root != NULL) {
+        cJSON *label = cJSON_GetObjectItemCaseSensitive(root, "label");
+        cJSON *conf = cJSON_GetObjectItemCaseSensitive(root, "conf");
+        cJSON *type = cJSON_GetObjectItemCaseSensitive(root, "type");
+
+        const char *label_text = cJSON_IsString(label) ? label->valuestring : raw;
+        const char *type_text = cJSON_IsString(type) ? type->valuestring : "infer";
+        double conf_value = cJSON_IsNumber(conf) ? conf->valuedouble : -1.0;
+
+        if (conf_value >= 0.0) {
+            snprintf(display, sizeof(display),
+                     "Pi infer result\n\nType: %.24s\nLabel: %.48s\nConf: %.2f\n\nRaw: %.160s",
+                     type_text, label_text, conf_value, raw);
+        } else {
+            snprintf(display, sizeof(display),
+                     "Pi infer result\n\nType: %.24s\nLabel: %.48s\n\nRaw: %.160s",
+                     type_text, label_text, raw);
+        }
+        cJSON_Delete(root);
+    } else {
+        snprintf(display, sizeof(display), "Pi infer result\n\nRaw: %.200s", raw);
+    }
+
+    lv_label_set_text(s_ai_result_label, display);
+}
 
 static const char *get_light_level_text(float lux)
 {
@@ -212,6 +273,14 @@ static void sensor_update_timer_cb(lv_timer_t *timer)
     }
 }
 
+static void ai_update_timer_cb(lv_timer_t *timer)
+{
+    lv_ui *ui = (lv_ui *)lv_timer_get_user_data(timer);
+    if (ui) {
+        update_ai_advice_display(ui);
+    }
+}
+
 // 启动传感器数据更新定时器
 void start_sensor_data_updates(lv_ui *ui)
 {
@@ -228,6 +297,18 @@ void start_sensor_data_updates(lv_ui *ui)
         lv_timer_set_user_data(s_sensor_timer, ui);
         lv_timer_set_period(s_sensor_timer, 5000);
     }
+
+    if (s_ai_timer == NULL) {
+        s_ai_timer = lv_timer_create(ai_update_timer_cb, 1000, ui);
+        if (s_ai_timer == NULL) {
+            ESP_LOGE(TAG_UI, "Failed to create AI update timer");
+        }
+    } else {
+        lv_timer_set_user_data(s_ai_timer, ui);
+        lv_timer_set_period(s_ai_timer, 1000);
+    }
+
+    update_ai_advice_display(ui);
     
     ESP_LOGD(TAG_UI, "Sensor data update timer started successfully with 5-second interval");
 }

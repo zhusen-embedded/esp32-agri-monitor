@@ -6,7 +6,6 @@
 #include "nvs_flash.h"
 #include "esp_log.h"
 #include "esp_wifi.h"
-#include "esp_http_client.h"
 #include "esp_netif.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"

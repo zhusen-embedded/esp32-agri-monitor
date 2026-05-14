@@ -10,6 +10,7 @@ idf_component_register(
     SRCS 
         "main.c"
         "uart_echo_wifi_ble/uart_echo_wifi_ble.c"
+        "uart_echo_wifi_ble/usb_pi_link.c"
         "esp_lcd_touch_ft6x36/esp_lcd_touch_ft6x36.c"
         ${UI_MAIN_SOURCES}
         ${UI_GENERATED_SOURCES}
@@ -32,13 +33,11 @@ idf_component_register(
     REQUIRES 
         esp_driver_uart 
         esp_driver_gpio 
-        esp_http_client 
+        esp_driver_usb_serial_jtag
         esp_wifi 
         mqtt
         nvs_flash
         json
-        wifi_provisioning
         bt
-        protocomm
         esp_psram
 )

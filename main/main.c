@@ -15,6 +15,7 @@
 #include "freertos/task.h"
 #include "freertos/semphr.h"
 #include "uart_echo_wifi_ble/uart_echo_wifi_ble.h"
+#include "uart_echo_wifi_ble/usb_pi_link.h"
 #include "events_temp_get.h"
 #include "events_manager.h"
 #include "ble_sitting_wifi/ble_sitting_wifi.h"
@@ -344,14 +345,24 @@ void app_main(void)
         return;
     }
     printf("Display initialized\n");
+
+    esp_err_t usb_ret = usb_pi_link_start();
+    if (usb_ret != ESP_OK) {
+        printf("Failed to start USB PI receiver: %d\n", usb_ret);
+    } else {
+        printf("USB PI receiver started\n");
+    }
     
+    // 蓝牙配网常开，确保无论是否连上 WiFi 都能被发现
+    printf("Start BLE provisioning...\n");
+    ble_wifi_provisioning_start();
+
     printf("Boot WiFi connecting...\n");
     err = ble_wifi_try_connect_saved(8000);
     if (err == ESP_OK) {
         printf("Boot WiFi connected\n");
     } else {
-        printf("Boot WiFi connect failed/timeout, start BLE provisioning\n");
-        ble_wifi_provisioning_start(); // 仅在记忆连接失败后启动蓝牙配网
+        printf("Boot WiFi connect failed/timeout, keep BLE provisioning active\n");
     }
     // 初始化触摸屏
     err = init_touch();

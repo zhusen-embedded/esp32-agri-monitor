@@ -22,14 +22,6 @@ static void ble_wifi_start_safe(void) {
     }
 }
 
-static void ble_wifi_stop_safe(void) {
-    uint64_t now = get_time_ms();
-    if (now - last_ble_action_time > BLE_DEBOUNCE_MS) {
-        ble_wifi_provisioning_stop();
-        last_ble_action_time = now;
-    }
-}
-
 // 在 WiFi 设置页面加载事件中调用
 void on_wifi_page_enter(lv_event_t *e) {
     printf("==> ble_wifi_provisioning_start three\n");
@@ -38,5 +30,6 @@ void on_wifi_page_enter(lv_event_t *e) {
 
 // 在 WiFi 设置页面卸载/离开事件中调用
 void on_wifi_page_exit(lv_event_t *e) {
-    ble_wifi_stop_safe();
+    (void)e;
+    // 保持 BLE 常开，页面离开不再关闭配网广播
 }
