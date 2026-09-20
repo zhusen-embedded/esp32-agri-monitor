@@ -15,61 +15,92 @@ static const char *TAG_UI = "UI";
 static lv_timer_t *s_sensor_timer = NULL;
 static lv_timer_t *s_ai_timer = NULL;
 static lv_obj_t *s_ai_result_label = NULL;
+static uint32_t s_last_ai_seq = 0;
+
+// 清理所有旧label/button子对象（向上兼容，避免残留控件遮挡）
+static void clear_old_labels(lv_obj_t *parent)
+{
+    if (!parent) return;
+    uint32_t cnt = lv_obj_get_child_cnt(parent);
+    for (int i = (int)cnt - 1; i >= 0; i--) {
+        lv_obj_t *child = lv_obj_get_child(parent, i);
+        if (child && (lv_obj_check_type(child, &lv_label_class) || lv_obj_check_type(child, &lv_button_class))) {
+            lv_obj_delete(child);
+        }
+    }
+}
 
 static void update_ai_advice_display(lv_ui *ui)
 {
-    if (!ui || !ui->more_scr_more_ss_tab_1) {
+    if (!ui || !ui->more_scr_more_ss || !ui->more_scr_more_ss_tab_1) {
+        printf("ERROR: update_ai_advice_display: ui or tabview/tab1 is NULL\n");
         return;
     }
 
-    if (s_ai_result_label == NULL) {
-        s_ai_result_label = lv_label_create(ui->more_scr_more_ss_tab_1);
-        lv_obj_set_pos(s_ai_result_label, 12, 12);
-        lv_obj_set_size(s_ai_result_label, 290, 190);
+    lv_obj_t *container = ui->more_scr_more_ss_tab_1;
+
+    // 如果标签无效或容器不同，重新创建
+    bool need_create = (s_ai_result_label == NULL) || !lv_obj_is_valid(s_ai_result_label);
+    if (!need_create && lv_obj_get_parent(s_ai_result_label) != container) {
+        lv_obj_delete(s_ai_result_label);
+        need_create = true;
+    }
+
+    if (need_create) {
+        clear_old_labels(container);
+        s_ai_result_label = lv_label_create(container);
+        if (!s_ai_result_label) {
+            printf("ERROR: update_ai_advice_display: label create failed\n");
+            return;
+        }
+        lv_obj_set_pos(s_ai_result_label, 8, 4);
+        lv_obj_set_size(s_ai_result_label, 304, 176);
         lv_label_set_long_mode(s_ai_result_label, LV_LABEL_LONG_WRAP);
         lv_obj_set_style_text_align(s_ai_result_label, LV_TEXT_ALIGN_LEFT, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_text_color(s_ai_result_label, lv_color_hex(0x1f2937), LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_text_font(s_ai_result_label, &lv_font_YouSheYuFeiTeJianKangTi_2_16, LV_PART_MAIN | LV_STATE_DEFAULT);
         lv_obj_set_style_pad_all(s_ai_result_label, 4, LV_PART_MAIN | LV_STATE_DEFAULT);
-        lv_obj_set_style_bg_opa(s_ai_result_label, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_opa(s_ai_result_label, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_set_style_bg_color(s_ai_result_label, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT);
+        lv_obj_move_foreground(s_ai_result_label);
+                // 初始化占位文字，避免开机乱码
+        lv_label_set_text(s_ai_result_label, "Raspberry Pi disconnected");
+        printf("AI label created successfully in container %p\n", (void *)container);
     }
 
     char raw[256];
-    char display[320];
+    char display[128];
     raw[0] = '\0';
-    display[0] = '\0';
 
-    if (!usb_pi_link_get_latest(raw, sizeof(raw))) {
-        snprintf(display, sizeof(display), "等待树莓派推理结果...\n\n示例：\n{\"type\":\"infer\",\"label\":\"tomato\",\"conf\":0.93}");
-        lv_label_set_text(s_ai_result_label, display);
+    bool has_data = usb_pi_link_get_latest(raw, sizeof(raw));
+    printf("AI check: has_data=%d, raw=%s\n", has_data, has_data ? raw : "N/A");
+
+    if (!has_data) {
+        // 无数据时保持占位文字，不重复设置
         return;
     }
 
     cJSON *root = cJSON_Parse(raw);
     if (root != NULL) {
+        cJSON *type = cJSON_GetObjectItemCaseSensitive(root, "type");
         cJSON *label = cJSON_GetObjectItemCaseSensitive(root, "label");
         cJSON *conf = cJSON_GetObjectItemCaseSensitive(root, "conf");
-        cJSON *type = cJSON_GetObjectItemCaseSensitive(root, "type");
 
-        const char *label_text = cJSON_IsString(label) ? label->valuestring : raw;
-        const char *type_text = cJSON_IsString(type) ? type->valuestring : "infer";
+        const char *type_text = cJSON_IsString(type) ? type->valuestring : "unknown";
+        const char *label_text = cJSON_IsString(label) ? label->valuestring : "unknown";
         double conf_value = cJSON_IsNumber(conf) ? conf->valuedouble : -1.0;
 
-        if (conf_value >= 0.0) {
-            snprintf(display, sizeof(display),
-                     "Pi infer result\n\nType: %.24s\nLabel: %.48s\nConf: %.2f\n\nRaw: %.160s",
-                     type_text, label_text, conf_value, raw);
-        } else {
-            snprintf(display, sizeof(display),
-                     "Pi infer result\n\nType: %.24s\nLabel: %.48s\n\nRaw: %.160s",
-                     type_text, label_text, raw);
-        }
+        snprintf(display, sizeof(display),
+                 "type: %s\nconfidence: %.0f%%",
+                 type_text, conf_value * 100.0);
         cJSON_Delete(root);
     } else {
-        snprintf(display, sizeof(display), "Pi infer result\n\nRaw: %.200s", raw);
+        // JSON 解析失败，显示原始数据
+        snprintf(display, sizeof(display), "Raw: %.100s", raw);
     }
 
     lv_label_set_text(s_ai_result_label, display);
+    printf("AI label text updated\n");
 }
 
 static const char *get_light_level_text(float lux)
@@ -276,7 +307,13 @@ static void sensor_update_timer_cb(lv_timer_t *timer)
 static void ai_update_timer_cb(lv_timer_t *timer)
 {
     lv_ui *ui = (lv_ui *)lv_timer_get_user_data(timer);
-    if (ui) {
+    if (!ui) {
+        return;
+    }
+
+    uint32_t current_seq = usb_pi_link_get_seq();
+    if (current_seq != s_last_ai_seq) {
+        s_last_ai_seq = current_seq;
         update_ai_advice_display(ui);
     }
 }
@@ -332,5 +369,6 @@ void force_sensor_display_update(lv_ui *ui)
     ESP_LOGD(TAG_UI, "Forcing sensor display update...");
     update_sensor_display(ui);
 }
+
 
 

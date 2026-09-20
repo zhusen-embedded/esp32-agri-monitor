@@ -315,7 +315,7 @@ static void wifi_notify_config_result(uint8_t status)
 static void boot_wifi_event_init(void)
 {
     if (s_boot_connect_event_group == NULL) {
-        s_boot_connect_event_group = xEventGroupCreate();
+        s_boot_connect_event_group = ();
     }
 }
 

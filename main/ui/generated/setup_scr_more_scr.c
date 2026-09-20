@@ -103,7 +103,7 @@ void setup_scr_more_scr(lv_ui *ui)
 
     //Write codes AI建议
     lv_obj_t * more_scr_more_ss_tab_1_label = lv_label_create(ui->more_scr_more_ss_tab_1);
-    lv_label_set_text(more_scr_more_ss_tab_1_label, "");
+    lv_label_set_text(more_scr_more_ss_tab_1_label, "Raspberry Pi disconnected");
 
     //Write codes 图表
     lv_obj_t * more_scr_more_ss_tab_2_label = lv_label_create(ui->more_scr_more_ss_tab_2);

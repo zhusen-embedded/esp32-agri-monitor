@@ -17,6 +17,7 @@ static const char *TAG = "USB_PI_LINK";
 
 static char s_latest_line[USB_PI_LINE_MAX];
 static bool s_has_latest = false;
+static uint32_t s_seq = 0;
 static bool s_task_started = false;
 
 static void trim_line(char *line)
@@ -47,9 +48,10 @@ static void store_result(const char *line)
         return;
     }
 
-    strncpy(s_latest_line, line, sizeof(s_latest_line) - 1);
+        strncpy(s_latest_line, line, sizeof(s_latest_line) - 1);
     s_latest_line[sizeof(s_latest_line) - 1] = '\0';
     s_has_latest = true;
+    s_seq++;
     ESP_LOGI(TAG, "PI inference result: %s", s_latest_line);
 }
 
@@ -80,6 +82,9 @@ static void usb_pi_rx_task(void *arg)
         if (read_len <= 0) {
             continue;
         }
+
+        ESP_LOGI(TAG, "usb read_len=%d", read_len);
+        ESP_LOG_BUFFER_HEXDUMP(TAG, buf, read_len, ESP_LOG_INFO);
 
         for (int i = 0; i < read_len; ++i) {
             char ch = (char)buf[i];
@@ -157,4 +162,9 @@ bool usb_pi_link_get_latest(char *out, size_t out_len)
     strncpy(out, s_latest_line, out_len - 1);
     out[out_len - 1] = '\0';
     return true;
+}
+
+uint32_t usb_pi_link_get_seq(void)
+{
+    return s_seq;
 }

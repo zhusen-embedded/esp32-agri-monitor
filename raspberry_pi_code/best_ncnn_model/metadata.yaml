@@ -1,0 +1,66 @@
+description: Ultralytics best model trained on D:\SystemSoftware\Documents\secondYolo\data.yaml
+author: Ultralytics
+date: '2026-05-14T15:11:08.877254'
+version: 8.4.23
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 32
+task: detect
+batch: 1
+imgsz:
+- 320
+- 320
+names:
+  0: 玉米灰斑病
+  1: 玉米叶枯病
+  2: 玉米锈病
+  3: 水稻白叶枯病
+  4: 水稻褐斑病
+  5: 水稻健康叶
+  6: 水稻稻瘟病
+  7: 水稻纹枯病
+  8: 辣椒炭疽病
+  9: 辣椒健康
+  10: 辣椒卷叶病
+  11: 辣椒叶斑病
+  12: 辣椒白粉虱
+  13: 辣椒黄化卷叶病毒
+  14: 甘蓝链格孢叶斑病
+  15: 甘蓝黑腐病
+  16: 甘蓝霜霉病
+  17: 甘蓝枯萎病
+  18: 甘蓝健康
+  19: 甘蓝白粉病
+  20: 甘蓝菌核病
+  21: 草莓不可食果
+  22: 马铃薯黑痣病
+  23: 马铃薯黑胫病
+  24: 马铃薯普通疮痂病
+  25: 马铃薯干腐病
+  26: 马铃薯早疫病叶
+  27: 马铃薯健康
+  28: 马铃薯健康叶
+  29: 马铃薯晚疫病叶
+  30: 草莓叶斑病
+  31: 番茄炭疽病果
+  32: 番茄细菌性斑点病叶
+  33: 番茄脐腐病
+  34: 番茄早疫病叶
+  35: 番茄健康果
+  36: 番茄健康叶
+  37: 番茄晚疫病叶
+  38: 番茄叶霉病
+  39: 番茄花叶病毒叶
+  40: 番茄斑点病叶
+  41: 番茄病毒斑
+  42: 番茄二斑叶螨叶
+  43: 番茄黄化卷叶病毒
+  44: 小麦白粉病
+  45: 小麦叶枯病
+  46: 小麦茎锈病
+  47: 小麦黄矮病
+args:
+  batch: 1
+  half: false
+channels: 3
+end2end: false
