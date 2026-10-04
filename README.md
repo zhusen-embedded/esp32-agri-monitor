@@ -172,8 +172,4 @@ python3 infer_and_send.py \
 ---
 
 ## TODO
-
-- [ ] 补充硬件原理图（`docs/hardware_design.md` 待完善）
-- [ ] 补充运行截图（LVGL 界面 / 串口数据 / 推理输出）
 - [ ] 实现 OTA 远程升级（分区表已预留）
-- [ ] 补充自动控制策略（当前为手动控制水泵与补光灯）
