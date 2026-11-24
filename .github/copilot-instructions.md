@@ -1,2 +1,0 @@
-用中文回复
-不要修改ui/generated ui/custom文件夹里面的文件
